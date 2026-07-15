@@ -103,6 +103,31 @@ def create_app(test_config=None):
     def is_cloud_runtime():
         return bool(os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_ID"))
 
+    def start_all_verifications(values):
+        criteria = search_criteria(values)
+        for key in ("collector_token", "collector_cloud_url"):
+            if values.get(key):
+                criteria[key] = values.get(key)
+        jobs = []
+        for store_name in CAPTCHA_STORES.values():
+            scraper_class = next((cls for cls in SCRAPERS if cls.store == store_name), None)
+            if not scraper_class:
+                continue
+            target_url = scraper_class(criteria=criteria).catalog_url_for_search()
+            if target_url:
+                jobs.append({"store": store_name, "url": target_url})
+        if not jobs:
+            raise ValueError("Pre túto kategóriu nie je pripravený žiadny blokovaný obchod.")
+        subprocess.Popen(
+            [
+                sys.executable, str(BASE_DIR / "verify_all_stores.py"),
+                json.dumps(jobs, ensure_ascii=False), json.dumps(criteria, ensure_ascii=False),
+            ],
+            cwd=BASE_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        return criteria, len(jobs)
+
     @app.before_request
     def require_admin_login():
         password = os.environ.get("RIVERDALE_ADMIN_PASSWORD", "")
@@ -468,6 +493,40 @@ def create_app(test_config=None):
             "<body style='font:16px sans-serif;padding:24px'>"
             f"<p>Otváram CAPTCHA pre <strong>{store_name}</strong>…</p>"
             "<p>Toto pomocné okno sa automaticky zavrie.</p>"
+            "<script>setTimeout(() => window.close(), 800);</script></body></html>"
+        )
+
+    @app.route("/local-verify-all", methods=["GET", "POST"])
+    def local_verify_all():
+        if is_cloud_runtime() or request.remote_addr not in {"127.0.0.1", "::1"}:
+            return "Lokálne overenie nie je dostupné.", 403
+        values = request.args if request.method == "GET" else request.form
+        context = validate_context(values)
+        criteria_values = dict(values)
+        if request.method == "GET":
+            collector_token = values.get("collector_token", "").strip()
+            collector_cloud_url = values.get("collector_cloud_url", "").strip().rstrip("/")
+            cloud_parts = urlparse(collector_cloud_url)
+            if not collector_token or cloud_parts.scheme != "https" or cloud_parts.hostname != "riverdale-furniture.onrender.com":
+                return "Neplatné cloudové prepojenie. Obnovte cloudovú stránku.", 400
+            criteria_values["collector_token"] = collector_token
+            criteria_values["collector_cloud_url"] = collector_cloud_url
+        try:
+            _, count = start_all_verifications(criteria_values)
+        except (ValueError, OSError) as exc:
+            if request.method == "POST":
+                flash(str(exc), "danger")
+                return redirect(url_for("index", **context, **search_form_values(values)))
+            return str(exc), 400
+        if request.method == "POST":
+            flash(f"Spustilo sa postupné overenie {count} obchodov.", "info")
+            return redirect(url_for("index", **context, **search_form_values(values)))
+        return (
+            "<!doctype html><html lang='sk'><meta charset='utf-8'>"
+            "<title>Riverdale – CAPTCHA</title>"
+            "<body style='font:16px sans-serif;padding:24px'>"
+            f"<p>Spúšťam postupné overenie <strong>{count} obchodov</strong>…</p>"
+            "<p>Po dokončení jedného obchodu sa otvorí ďalší. Toto okno sa zavrie.</p>"
             "<script>setTimeout(() => window.close(), 800);</script></body></html>"
         )
 

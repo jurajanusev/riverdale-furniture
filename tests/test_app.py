@@ -349,14 +349,14 @@ class RiverdaleAppTest(unittest.TestCase):
                 data={"space_id": "dom-betty", "room": "spálňa / izba", "item_type": "posteľ"},
                 follow_redirects=True,
             )
-        self.assertIn(b"http://127.0.0.1:5000/local-verify-store/moebelix-sk", page.data)
+        self.assertIn(b"http://127.0.0.1:5000/local-verify-all", page.data)
         self.assertIn("CAPTCHA sa musí overiť na vašom počítači".encode(), response.data)
         popen.assert_not_called()
 
     @patch("app.subprocess.Popen")
     def test_cloud_button_can_start_local_verification_without_switching_apps(self, popen):
         response = self.client.get(
-            "/local-verify-store/moebelix-sk",
+            "/local-verify-all",
             query_string={
                 "space_id": "dom-betty", "room": "spálňa / izba",
                 "main_category": "nabytok", "item_type": "posteľ",
@@ -369,6 +369,7 @@ class RiverdaleAppTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"window.close()", response.data)
         popen.assert_called_once()
+        self.assertIn("verify_all_stores.py", popen.call_args.args[0][1])
         helper_context = json.loads(popen.call_args.args[0][-1])
         self.assertEqual(helper_context["max_price"], 500.0)
         self.assertEqual(helper_context["bed_width"], "90")

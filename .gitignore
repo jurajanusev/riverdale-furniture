@@ -4,6 +4,7 @@ __pycache__/
 data/*.db
 data/browser_profiles/
 data/browser_cache/
+data/collector-server*.log
 static/uploads/*
 !static/uploads/.gitkeep
 exports/*

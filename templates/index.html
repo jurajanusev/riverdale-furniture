@@ -68,17 +68,16 @@
         {% if cloud_runtime %}
         <p><strong>Zostaň na tejto cloudovej stránke.</strong> Vyplň kritériá vyššie a klikni na obchod. Lokálny zberač otvorí priamo Chrome s CAPTCHA; pomocné okno sa samo zavrie a produkty sa po overení odošlú sem.</p>
         <div class="captcha-actions">
-          {% for key, store in captcha_stores.items() %}<a class="button outline" data-local-verify-store="{{ key }}" data-collector-token="{{ collector_token }}" data-collector-cloud-url="https://riverdale-furniture.onrender.com" target="_blank" rel="noopener" href="http://127.0.0.1:5000/local-verify-store/{{ key }}">{{ store }}</a>{% endfor %}
+          <a class="button outline" data-local-verify-all data-collector-token="{{ collector_token }}" data-collector-cloud-url="https://riverdale-furniture.onrender.com" target="_blank" rel="noopener" href="http://127.0.0.1:5000/local-verify-all">Overiť všetky blokované obchody</a>
         </div>
         <small>Lokálny zberač musí bežať na pozadí. Ak tlačidlo nereaguje, spusti raz <code>start_collector.ps1</code>.</small>
         {% else %}
         <p>Otvorí sa samostatné okno prehliadača. Vyrieš CAPTCHA a okno nechaj otvorené. Aplikácia v tej istej relácii uloží katalóg aj produktové stránky a po dokončení okno zavrie automaticky. Potom spusti vyhľadávanie.</p>
         <div class="captcha-actions">
-          {% for key, store in captcha_stores.items() %}<form class="captcha-store-form" action="{{ url_for('verify_store', store_key=key) }}" method="post">
+          <form class="captcha-store-form" action="{{ url_for('local_verify_all') }}" method="post">
             <input type="hidden" name="space_id" value="{{ context.space_id }}"><input type="hidden" name="room" value="{{ context.room }}"><input type="hidden" name="main_category" value="{{ context.main_category }}"><input type="hidden" name="item_type" value="{{ context.item_type }}">
-            <button class="button outline" type="submit">{{ store }}</button>
-            {% set status = captcha_statuses[key] %}{% if status.state == 'complete' %}<small>Pripravené: {{ status.cached }}; do cloudu: {{ status.synced|default(0) }}{% if status.sync_error %} — chyba: {{ status.sync_error }}{% endif %}</small>{% elif status.state in ('opening', 'waiting_for_captcha', 'caching_products') %}<small>Prebieha{% if status.cached is defined %}: {{ status.cached }}{% endif %}</small>{% elif status.state == 'cancelled' %}<small>Nedokončené</small>{% elif status.state == 'error' %}<small>Chyba: {{ status.error }}</small>{% endif %}
-          </form>{% endfor %}
+            <button class="button outline" type="submit">Overiť všetky blokované obchody</button>
+          </form>
         </div>
         {% endif %}
       </div>
