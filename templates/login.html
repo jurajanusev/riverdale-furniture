@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prihlásenie — Riverdale</title>
+  <style>
+    :root { color-scheme: light; --green:#294b3b; --gold:#c99b4e; --paper:#f5f1e8; --ink:#24332b; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; background:var(--paper); color:var(--ink); font-family:Arial,sans-serif; }
+    main { width:min(440px,100%); padding:42px; background:#fff; border:1px solid #d8d1c4; box-shadow:0 20px 50px #294b3b1a; }
+    .eyebrow { color:var(--gold); text-transform:uppercase; letter-spacing:.18em; font-weight:700; }
+    h1 { margin:12px 0 8px; font:52px/1 Georgia,serif; }
+    p { color:#6d776f; line-height:1.5; }
+    label { display:block; margin:28px 0 8px; font-weight:700; }
+    input { width:100%; padding:14px; border:1px solid #b9beb9; font-size:18px; }
+    button { width:100%; margin-top:16px; padding:15px; border:0; background:var(--green); color:#fff; font-size:17px; font-weight:700; cursor:pointer; }
+    .flash { margin:16px 0; padding:12px; background:#f9e1dc; color:#8a3025; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Product finder</div>
+    <h1>Riverdale</h1>
+    <p>Súkromná správa produktov a výberov.</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="flash">{{ message }}</div>{% endfor %}{% endwith %}
+    <form method="post">
+      <input type="hidden" name="next" value="{{ next }}">
+      <label for="password">Heslo</label>
+      <input id="password" name="password" type="password" required autofocus autocomplete="current-password">
+      <button type="submit">Prihlásiť sa</button>
+    </form>
+  </main>
+</body>
+</html>

@@ -1,0 +1,61 @@
+.selection-button { text-decoration: none; }
+.selection-button span { display: inline-grid; place-items: center; min-width: 1.75rem; height: 1.75rem; margin-left: .45rem; padding: 0 .35rem; border-radius: 999px; background: #c99c4f; color: #17271f; font-size: .82rem; }
+.selection-feedback { display: none; margin: .75rem 0 0; padding: .7rem .8rem; background: #edf2ec; border-left: 3px solid #304b3d; color: #304b3d; font-size: .88rem; }
+.selection-feedback.is-visible { display: block; }
+.selection-feedback a { color: inherit; font-weight: 700; }
+.captcha-panel { margin: 0 0 18px; }
+.captcha-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.2rem; cursor: pointer; color: #304b3d; }
+.captcha-panel summary span { color: #747c74; font-size: .8rem; font-weight: 400; }
+.captcha-content { padding: 0 1.2rem 1.2rem; border-top: 1px solid #dedbd2; }
+.captcha-content p { max-width: 65rem; color: #6d786f; font-size: .86rem; line-height: 1.5; }
+.captcha-actions { display: flex; flex-wrap: wrap; gap: .55rem; }
+.captcha-actions form { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; margin: 0; }
+.captcha-actions .button { padding: .65rem .8rem; font-size: .76rem; }
+.captcha-actions small { color: #6d786f; font-size: .68rem; }
+.selection-main { padding-bottom: 5rem; }
+.selection-summary { display: flex; align-items: center; justify-content: space-between; gap: 2rem; border-top: 5px solid #c99c4f; }
+.selection-summary h2 { margin: .2rem 0 .6rem; }
+.selection-summary p:last-child { max-width: 42rem; color: #6d786f; }
+.architect-sharing { margin-top: 1.25rem; padding: 1.4rem; border-top: 4px solid #304b3d; }
+.architect-share-intro { display: flex; align-items: end; justify-content: space-between; gap: 2rem; }
+.architect-share-intro h2 { margin: .15rem 0 .4rem; font-family: Georgia, serif; font-weight: 400; }
+.architect-share-intro p:last-child { margin: 0; color: #6d786f; }
+.architect-share-form { display: flex; align-items: end; gap: .6rem; flex: 0 0 auto; }
+.architect-share-form label { color: #6d786f; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+.architect-share-form input { display: block; margin-top: .35rem; padding: .72rem; border: 1px solid #cbc9c1; }
+.share-link-list { margin-top: 1.2rem; border-top: 1px solid #dedbd2; }
+.share-link-row { display: grid; grid-template-columns: minmax(10rem, .7fr) minmax(20rem, 2fr); gap: 1rem; align-items: center; padding: .85rem 0; border-bottom: 1px solid #dedbd2; }
+.share-link-row strong,.share-link-row span { display: block; }
+.share-link-row span { margin-top: .2rem; color: #6d786f; font-size: .75rem; }
+.share-link-controls { display: flex; gap: .45rem; align-items: center; }
+.share-link-controls input { min-width: 0; flex: 1; padding: .68rem; border: 1px solid #cbc9c1; background: #f7f5ef; }
+.share-link-controls form { margin: 0; }
+.architect-picked { display: inline-block; margin: .45rem 0; padding: .4rem .55rem; background: #f5e7e4; color: #8b3f38; font-size: .78rem; font-weight: 700; }
+.selection-stats { display: flex; gap: 1px; flex: 0 0 auto; background: #d8d8cf; border: 1px solid #d8d8cf; }
+.selection-stats div { min-width: 9rem; padding: 1.15rem 1.35rem; background: #fff; text-align: center; }
+.selection-stats strong, .selection-stats span { display: block; }
+.selection-stats strong { color: #304b3d; font-family: Georgia, serif; font-size: 1.45rem; }
+.selection-stats span { margin-top: .2rem; color: #747c74; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; }
+.selection-group { margin-top: 3rem; }
+.selection-group-heading { display: flex; align-items: end; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid #cbc9bc; padding-bottom: .7rem; }
+.selection-group-heading h2 { margin: .15rem 0 0; font-family: Georgia, serif; font-size: 2rem; font-weight: 400; }
+.selection-group-heading > span { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: #acbba8; color: #263b30; }
+.selection-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+.selection-card { overflow: hidden; background: #fff; border: 1px solid #d9d5ca; box-shadow: 0 14px 35px rgba(37, 51, 43, .08); }
+.selection-image { height: 16rem; background: #efeee8; }
+.selection-image img { width: 100%; height: 100%; object-fit: contain; }
+.selection-image .placeholder { height: 100%; display: grid; place-items: center; text-align: center; color: #879087; }
+.selection-card-body { padding: 1.2rem; }
+.selection-store { margin: 0 0 .35rem; color: #a77a34; font-size: .76rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.selection-card h3 { min-height: 3rem; margin: 0; font-family: Georgia, serif; font-size: 1.25rem; font-weight: 400; }
+.selection-price { margin: .7rem 0 1rem; color: #304b3d; font-size: 1.25rem; font-weight: 700; }
+.selection-card dl { margin: 0; border-top: 1px solid #e1dfd7; }
+.selection-card dl div { display: grid; grid-template-columns: 5.5rem 1fr; gap: .5rem; padding: .45rem 0; border-bottom: 1px solid #e1dfd7; font-size: .83rem; }
+.selection-card dt { color: #758077; }
+.selection-card dd { margin: 0; }
+.selection-card-actions { display: flex; align-items: center; gap: .8rem; margin-top: 1rem; }
+.selection-card-actions .button { padding: .75rem .9rem; font-size: .82rem; text-decoration: none; }
+.remove-selection { padding: 0; border: 0; background: none; color: #7b4b42; text-decoration: underline; cursor: pointer; }
+.selection-empty { margin-top: 2rem; text-align: center; }
+@media (max-width: 900px) { .selection-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .selection-summary,.architect-share-intro { align-items: flex-start; flex-direction: column; } .share-link-row { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .selection-grid { grid-template-columns: 1fr; } .selection-stats { width: 100%; } .selection-stats div { min-width: 0; flex: 1; padding: 1rem .55rem; } .architect-share-form,.share-link-controls { align-items: stretch; flex-direction: column; width: 100%; } }

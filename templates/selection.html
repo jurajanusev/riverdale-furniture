@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Výber miestnosti · Riverdale</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='selection.css') }}">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <p class="eyebrow">Výber priestoru</p>
+        <h1>Riverdale</h1>
+        <div class="breadcrumbs"><span>{{ context.space_name }}</span><b>›</b><strong>{{ context.room }}</strong></div>
+      </div>
+      <div class="hero-actions">
+        <button class="button ghost" type="button" data-open-spaces>Iný priestor</button>
+        <a class="button ghost" href="{{ url_for('index', space_id=context.space_id, room=context.room, main_category=context.main_category, item_type=context.item_type) }}">Späť na vyhľadávanie</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="selection-main">
+    <section class="selection-summary panel">
+      <div><p class="eyebrow">Schválené spolu</p><h2>Výber miestnosti</h2><p>Stoly, postele, koberce a ďalšie schválené produkty pre túto miestnosť sú na jednom mieste.</p></div>
+      <div class="selection-stats">
+        <div><strong data-selection-total-count>{{ products|length }}</strong><span>produktov</span></div>
+        <div><strong data-selection-total-price>{{ "%.2f"|format(total_price)|replace('.', ',') }} €</strong><span>celková cena</span></div>
+      </div>
+    </section>
+
+    <section class="architect-sharing panel">
+      <div class="architect-share-intro"><div><p class="eyebrow">Spätná väzba</p><h2>Zdieľať s architektom</h2><p>Architekt uvidí iba schválené produkty tejto miestnosti a označí tie, ktoré sa mu páčia.</p></div>
+        <form action="{{ url_for('create_architect_share') }}" method="post" class="architect-share-form">
+          <input type="hidden" name="space_id" value="{{ context.space_id }}"><input type="hidden" name="room" value="{{ context.room }}"><input type="hidden" name="main_category" value="{{ context.main_category }}"><input type="hidden" name="item_type" value="{{ context.item_type }}">
+          <label>Meno architekta<input name="architect_name" placeholder="Architekt"></label><button class="button primary" type="submit">Vytvoriť odkaz</button>
+        </form>
+      </div>
+      {% if share_links %}<div class="share-link-list">
+        {% for share in share_links %}<div class="share-link-row">
+          <div><strong>{{ share.architect_name }}</strong><span>{{ share.selected_count }} označených · platí do {{ share.expires_at[:10] }}</span></div>
+          <div class="share-link-controls"><input readonly value="{{ url_for('architect_review', token=share.token, _external=True) }}"><button type="button" class="button dark" data-copy-share>Kopírovať</button><form action="{{ url_for('revoke_architect_share', token=share.token) }}" method="post"><button type="submit" class="remove-selection">Zrušiť</button></form></div>
+        </div>{% endfor %}
+      </div>{% endif %}
+    </section>
+
+    {% if products %}
+      {% for group in groups %}
+      <section class="selection-group" data-selection-group>
+        <div class="selection-group-heading">
+          <div><p class="eyebrow">{{ group.category_name }}</p><h2>{{ group.item_type|capitalize }}</h2></div>
+          <span>{{ group.products|length }}</span>
+        </div>
+        <div class="selection-grid">
+          {% for p in group.products %}
+          <article class="selection-card" data-selection-card data-id="{{ p.id }}" data-price="{{ p.frame_price or 0 }}">
+            <div class="selection-image">
+              {% if p.local_image %}<img src="{{ url_for('uploaded_image', filename=p.local_image) }}" alt="{{ p.name }}">
+              {% elif p.image_url %}<img src="{{ p.image_url }}" alt="{{ p.name }}" referrerpolicy="no-referrer">
+              {% else %}<div class="placeholder">Fotografia<br>nie je dostupná</div>{% endif %}
+            </div>
+            <div class="selection-card-body">
+              <p class="selection-store">{{ p.store }}</p>
+              {% if architect_counts.get(p.id) %}<p class="architect-picked">♥ Páči sa architektovi{% if architect_counts[p.id] > 1 %} ({{ architect_counts[p.id] }}×){% endif %}</p>{% endif %}
+              <h3>{{ p.name }}</h3>
+              <p class="selection-price">{% if p.frame_price is not none %}{{ "%.2f"|format(p.frame_price)|replace('.', ',') }} €{% else %}Cena neoverená{% endif %}</p>
+              <dl>
+                <div><dt>Rozmery</dt><dd>{{ p.total_dimensions or 'Neoverené' }}</dd></div>
+                <div><dt>Materiál</dt><dd>{{ p.material or 'Neoverené' }}</dd></div>
+                <div><dt>Farba</dt><dd>{{ p.color or 'Neoverené' }}</dd></div>
+              </dl>
+              <div class="selection-card-actions">
+                <a class="button dark" href="{{ p.product_url }}" target="_blank" rel="noopener noreferrer">Otvoriť produkt ↗</a>
+                <button type="button" class="remove-selection" data-remove-selection>Odobrať z výberu</button>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+    {% else %}
+      <section class="empty panel selection-empty"><div class="empty-icon">⌂</div><h2>Výber miestnosti je zatiaľ prázdny</h2><p>Vo vyhľadávaní označ produkty tlačidlom „Schváliť“ a automaticky sa tu zobrazia.</p><a class="button primary" href="{{ url_for('index', space_id=context.space_id, room=context.room, main_category=context.main_category, item_type=context.item_type) }}">Prejsť na vyhľadávanie</a></section>
+    {% endif %}
+  </main>
+
+  <dialog id="spaces-modal" class="spaces-modal">
+    <form method="dialog" class="modal-shell"><button class="close" aria-label="Zavrieť">×</button></form>
+    <div class="spaces-content">
+      <p class="eyebrow">Výbery Riverdale</p><h2>Priestory a miestnosti</h2>
+      <p class="spaces-intro">Vyber miestnosť a zobrazia sa všetky jej schválené produkty pokope.</p>
+      <div class="spaces-grid">
+        {% for space in spaces %}<section class="space-group {% if context.space_id == space.id %}is-current{% endif %}">
+          <h3>{{ space.name }}</h3>
+          <div class="room-links">{% for room in space.rooms %}<a class="{% if context.space_id == space.id and context.room == room %}is-current{% endif %}" href="{{ url_for('selection', space_id=space.id, room=room, main_category=context.main_category, item_type=context.item_type) }}">{{ room }}</a>{% endfor %}</div>
+        </section>{% endfor %}
+      </div>
+    </div>
+  </dialog>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

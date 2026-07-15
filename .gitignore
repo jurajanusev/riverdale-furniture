@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+data/*.db
+data/browser_profiles/
+data/browser_cache/
+static/uploads/*
+!static/uploads/.gitkeep
+exports/*
+!exports/.gitkeep

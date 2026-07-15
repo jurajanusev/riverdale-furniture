@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Riverdale Product Finder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='selection.css') }}">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <p class="eyebrow">Product Finder</p>
+        <h1>Riverdale</h1>
+        <div class="breadcrumbs">
+          <span>{{ context.space_name }}</span><b>›</b><span>{{ context.room }}</span><b>›</b><strong>{{ context.item_type|capitalize }}</strong>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button class="button ghost" type="button" data-open-spaces>Priestory</button>
+        <a class="button ghost selection-button" href="{{ url_for('selection', space_id=context.space_id, room=context.room, main_category=context.main_category, item_type=context.item_type) }}">Výber miestnosti <span data-selection-count>{{ selection_count }}</span></a>
+        <form action="{{ url_for('refresh_prices') }}" method="post"><button class="button ghost" type="submit">Aktualizovať ceny</button></form>
+        <details class="export-menu"><summary class="button ghost">Exportovať</summary><div><a href="{{ url_for('export', kind='xlsx') }}">Excel .xlsx</a><a href="{{ url_for('export', kind='csv') }}">Google Sheets CSV</a><a href="{{ url_for('export', kind='canva') }}">Canva Bulk CSV</a></div></details>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="notice {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
+
+    <section class="search-panel panel">
+      <div class="panel-title"><div><p class="eyebrow">Vyhľadávanie produktov</p><h2>Čo hľadáme?</h2></div><p>Set a miestnosť určujú iba cieľové zaradenie schváleného produktu. Neovplyvňujú výsledky vyhľadávania. Prázdna farba alebo materiál znamená bez obmedzenia.</p></div>
+      <form class="search-form context-form" action="{{ url_for('search_products') }}" method="post">
+        <label>Set
+          <select name="space_id" data-space-select>
+            {% for space in spaces %}<option value="{{ space.id }}" data-rooms='{{ space.rooms|tojson }}' {% if context.space_id == space.id %}selected{% endif %}>{{ space.name }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Miestnosť / zóna<select name="room" data-room-select data-current="{{ context.room }}"></select></label>
+        <label>Hlavná kategória
+          <select name="main_category" data-category-select>
+            {% for category in categories %}<option value="{{ category.id }}" data-types='{{ category.types|tojson }}' {% if context.main_category == category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Typ položky<select name="item_type" data-item-type-select data-current="{{ context.item_type }}"></select></label>
+        <label>Min. cena<input name="search_min_price" type="number" min="0" step="1" placeholder="Od 0 €"></label>
+        <label>Max. cena<input name="search_max_price" type="number" min="0" step="1" placeholder="Bez limitu"></label>
+        <label>Farba<input name="search_color" placeholder="Ľubovoľná"></label>
+        <label>Materiál<input name="search_material" placeholder="Ľubovoľný"></label>
+        <label>Dostupnosť<select name="search_in_stock"><option value="">Všetky</option><option value="yes">Iba dostupné</option></select></label>
+        <label data-dimension-filter>Min. šírka (cm)<input name="search_min_width" type="number" min="0" step="1" placeholder="Bez minima"></label>
+        <label data-dimension-filter>Max. šírka (cm)<input name="search_max_width" type="number" min="0" step="1" placeholder="Bez maxima"></label>
+        <label data-dimension-filter>Max. hĺbka (cm)<input name="search_max_depth" type="number" min="0" step="1" placeholder="Bez maxima"></label>
+        <label data-dimension-filter>Max. výška (cm)<input name="search_max_height" type="number" min="0" step="1" placeholder="Bez maxima"></label>
+        <label data-bed-filter>Rozmer postele – šírka<select name="search_bed_width"><option value="">Všetky</option>{% for width in (80, 90, 100, 120, 140, 160, 180, 200) %}<option value="{{ width }}">{{ width }} cm</option>{% endfor %}</select></label>
+        <label data-bed-filter>Rozmer postele – dĺžka<select name="search_bed_length"><option value="">Všetky</option>{% for length in (190, 200, 210) %}<option value="{{ length }}">{{ length }} cm</option>{% endfor %}</select></label>
+        <label data-bed-filter>Rošt<select name="search_slats_included"><option value="any">Nerozhoduje</option><option value="yes">V cene</option><option value="no">Bez roštu</option></select></label>
+        <label data-bed-filter>Matrac<select name="search_mattress_included"><option value="any">Nerozhoduje</option><option value="yes">V cene</option><option value="no">Bez matraca</option></select></label>
+        <button class="button primary search-submit" type="submit">Vyhľadať produkty</button>
+      </form>
+      <p class="search-hint">Kritériá bez zvolenej hodnoty neobmedzujú výsledky. Rozmerové filtre sa zobrazujú iba pri kategóriách, pri ktorých ho obchody a produktové stránky bežne uvádzajú.</p>
+    </section>
+
+    <details class="captcha-panel panel">
+      <summary><strong>Ručne overiť blokovaný obchod</strong><span>Pre Möbelix, XXXLutz, Mömax a Sconto</span></summary>
+      <div class="captcha-content">
+        <p>Otvorí sa samostatné okno prehliadača. Vyrieš CAPTCHA a okno nechaj otvorené. Aplikácia v tej istej relácii uloží katalóg aj produktové stránky a po dokončení okno zavrie automaticky. Potom spusti vyhľadávanie.</p>
+        <div class="captcha-actions">
+          {% for key, store in captcha_stores.items() %}<form action="{{ url_for('verify_store', store_key=key) }}" method="post">
+            <input type="hidden" name="space_id" value="{{ context.space_id }}"><input type="hidden" name="room" value="{{ context.room }}"><input type="hidden" name="main_category" value="{{ context.main_category }}"><input type="hidden" name="item_type" value="{{ context.item_type }}">
+            <button class="button outline" type="submit">{{ store }}</button>
+            {% set status = captcha_statuses[key] %}{% if status.state == 'complete' %}<small>Pripravené: {{ status.cached }} produktov</small>{% elif status.state in ('opening', 'waiting_for_captcha', 'caching_products') %}<small>Prebieha{% if status.cached is defined %}: {{ status.cached }}{% endif %}</small>{% elif status.state == 'cancelled' %}<small>Nedokončené</small>{% elif status.state == 'error' %}<small>Chyba: {{ status.error }}</small>{% endif %}
+          </form>{% endfor %}
+        </div>
+      </div>
+    </details>
+
+    <section class="toolbar panel">
+      <form class="filters" method="get">
+        <input type="hidden" name="space_id" value="{{ context.space_id }}"><input type="hidden" name="room" value="{{ context.room }}"><input type="hidden" name="main_category" value="{{ context.main_category }}"><input type="hidden" name="item_type" value="{{ context.item_type }}">
+        <label>Obchod<select name="store"><option value="">Všetky</option>{% for v in options.store %}<option {% if filters.store == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+        <label>Krajina<select name="country"><option value="">Všetky</option>{% for v in options.country %}<option {% if filters.country == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+        <label>Max. cena<input name="max_price" type="number" min="0" step="1" value="{{ filters.max_price }}" placeholder="Bez limitu"></label>
+        <label>Farba<input name="color" value="{{ filters.color }}" placeholder="Všetky"></label>
+        <label>Materiál<input name="material" value="{{ filters.material }}" placeholder="Všetky"></label>
+        <label>Dostupnosť<select name="availability"><option value="">Všetky</option>{% for v in options.availability %}<option {% if filters.availability == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+        <label>Stav<select name="approval_status"><option value="">Všetky</option>{% for k,v in status_labels.items() %}<option value="{{ k }}" {% if filters.approval_status == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+        <label>Zoradenie<select name="sort"><option value="store" {% if sort=='store' %}selected{% endif %}>Obchod</option><option value="price_asc" {% if sort=='price_asc' %}selected{% endif %}>Cena: najnižšia</option><option value="price_desc" {% if sort=='price_desc' %}selected{% endif %}>Cena: najvyššia</option><option value="name" {% if sort=='name' %}selected{% endif %}>Názov</option><option value="checked" {% if sort=='checked' %}selected{% endif %}>Dátum kontroly</option></select></label>
+        <button class="button dark" type="submit">Filtrovať</button><a class="reset" href="{{ url_for('index', space_id=context.space_id, room=context.room, main_category=context.main_category, item_type=context.item_type) }}">Zrušiť filtre</a>
+      </form>
+    </section>
+
+    <div class="section-heading"><div><p class="eyebrow">{{ category_by_id[context.main_category].name }} · {{ context.space_name }}</p><h2>{{ context.item_type|capitalize }} <span>{{ products|length }}</span></h2><p class="section-context">{{ context.room }}</p></div><button class="button outline" data-open-modal>+ Pridať produkt manuálne</button></div>
+
+    {% if products %}<section class="product-grid">
+      {% for p in products %}<article class="product-card status-{{ p.approval_status }}" data-id="{{ p.id }}">
+        <div class="image-wrap">{% if p.local_image %}<img src="{{ url_for('uploaded_image', filename=p.local_image) }}" alt="{{ p.name }}">{% elif p.image_url %}<img src="{{ p.image_url }}" alt="{{ p.name }}" referrerpolicy="no-referrer">{% else %}<div class="placeholder">Fotografia<br>nie je dostupná</div>{% endif %}<span class="status-badge">{{ status_labels[p.approval_status] }}</span></div>
+        <div class="card-body"><div class="meta"><span>{{ p.internal_id }}</span><span>{{ p.store }} · {{ p.country }}</span></div><p class="assignment">{{ p.space_name }} · {{ p.room }} · {{ p.item_type }}</p><h3>{{ p.name }}</h3><p class="price">{% if p.frame_price is not none %}{{ '%.2f'|format(p.frame_price)|replace('.', ',') }} €{% else %}Neoverené{% endif %}<small>cena produktu</small></p>
+          <dl><div><dt>Celkové rozmery</dt><dd>{{ p.total_dimensions }}</dd></div><div><dt>Materiál</dt><dd>{{ p.material }}</dd></div><div><dt>Farba</dt><dd>{{ p.color }}</dd></div>{% if p.item_type == 'posteľ' %}<div><dt>Rozmer matraca</dt><dd>{{ p.mattress_width or '?' }} × {{ p.mattress_length or '?' }} cm</dd></div><div><dt>Rošt v cene</dt><dd>{{ 'Áno' if p.slats_included is true else 'Nie' if p.slats_included is false else 'Neoverené' }}</dd></div><div><dt>Matrac v cene</dt><dd>{{ 'Áno' if p.mattress_included is true else 'Nie' if p.mattress_included is false else 'Neoverené' }}</dd></div>{% endif %}</dl>
+          <div class="verification"><span>{{ p.availability }}</span><span>Kontrola: {{ p.last_checked }}</span></div>
+          <a class="product-link" href="{{ p.product_url }}" target="_blank" rel="noopener noreferrer">Otvoriť produkt ↗</a>
+          <label class="notes-label">Poznámka<textarea class="notes" rows="2" placeholder="Poznámka pre tím…">{{ p.notes }}</textarea></label>
+          <div class="approval"><button data-status="approved">Schváliť do výberu</button><button data-status="maybe">Možno</button><button data-status="rejected">Vyradiť</button></div>
+          <p class="selection-feedback {% if p.approval_status == 'approved' %}is-visible{% endif %}">Produkt je vo výbere miestnosti. <a href="{{ url_for('selection', space_id=p.space_id, room=p.room, main_category=p.main_category, item_type=p.item_type) }}">Otvoriť výber</a></p>
+          <button class="delete-product" type="button" data-delete-product>Vymazať produkt</button>
+        </div>
+      </article>{% endfor %}
+    </section>{% else %}<section class="empty panel"><div class="empty-icon">⌂</div><h2>Zatiaľ tu nie sú žiadne výsledky</h2><p>Spustite vyhľadávanie pre {{ context.item_type }} alebo pridajte produkt manuálne.</p><button class="button primary" data-open-modal>Pridať prvý produkt</button></section>{% endif %}
+  </main>
+
+  <dialog id="spaces-modal" class="spaces-modal">
+    <form method="dialog" class="modal-shell"><button class="close" aria-label="Zavrieť">×</button></form>
+    <div class="spaces-content">
+      <p class="eyebrow">Riverdale</p><h2>Priestory a miestnosti</h2>
+      <p class="spaces-intro">Kliknutím sa presunieš priamo do vybranej miestnosti. Kategória a typ položky zostanú zachované.</p>
+      <div class="spaces-grid">
+        {% for space in spaces %}<section class="space-group {% if context.space_id == space.id %}is-current{% endif %}">
+          <h3>{{ space.name }}</h3>
+          <div class="room-links">{% for room in space.rooms %}<a class="{% if context.space_id == space.id and context.room == room %}is-current{% endif %}" href="{{ url_for('index', space_id=space.id, room=room, main_category=context.main_category, item_type=context.item_type) }}">{{ room }}</a>{% endfor %}</div>
+        </section>{% endfor %}
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="product-modal"><form method="dialog" class="modal-shell"><button class="close" aria-label="Zavrieť">×</button></form><form action="{{ url_for('add_product') }}" method="post" enctype="multipart/form-data" class="modal-content context-form"><p class="eyebrow">Overený zdroj</p><h2>Pridať produkt manuálne</h2><div class="form-grid">
+    <label>Set<select name="space_id" data-space-select>{% for space in spaces %}<option value="{{ space.id }}" data-rooms='{{ space.rooms|tojson }}' {% if context.space_id == space.id %}selected{% endif %}>{{ space.name }}</option>{% endfor %}</select></label>
+    <label>Miestnosť<select name="room" data-room-select data-current="{{ context.room }}"></select></label>
+    <label>Kategória<select name="main_category" data-category-select>{% for category in categories %}<option value="{{ category.id }}" data-types='{{ category.types|tojson }}' {% if context.main_category == category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
+    <label>Typ položky<select name="item_type" data-item-type-select data-current="{{ context.item_type }}"></select></label>
+    <label class="wide">Názov*<input name="name" required></label><label>Obchod*<select name="store" required>{% for store in stores %}<option>{{ store }}</option>{% endfor %}</select></label><label>Cena produktu (€)*<input name="price" type="number" min="0" step="0.01" required></label><label>Rozmery<input name="dimensions" placeholder="napr. 120 × 80 × 75 cm"></label><label>Materiál<input name="material" placeholder="MDF, masív…"></label><label>Farba<input name="color" placeholder="napr. Biela"></label><label>Dostupnosť<select name="availability"><option>Neoverené</option><option>Dostupné</option><option>Nedostupné</option></select></label><label class="wide">URL produktu*<input name="product_url" type="url" required></label><label class="wide">URL fotografie<input name="image_url" type="url"></label><label>Rošt v cene<select name="slats_included"><option value="unknown">Neoverené</option><option value="yes">Áno</option><option value="no">Nie</option></select></label><label>Matrac v cene<select name="mattress_included"><option value="unknown">Neoverené</option><option value="yes">Áno</option><option value="no">Nie</option></select></label><label class="wide">Nahrať fotografiu<input name="image_file" type="file" accept="image/jpeg,image/png,image/webp"></label><label class="wide">Poznámka<textarea name="notes" rows="3"></textarea></label></div><button class="button primary" type="submit">Uložiť produkt</button></form></dialog>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body></html>
