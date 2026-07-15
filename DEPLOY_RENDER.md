@@ -17,3 +17,21 @@ odvolateľné.
 Render nedokáže otvoriť lokálny Google Chrome na ručné potvrdenie CAPTCHA.
 Obchody bez CAPTCHA je možné vyhľadávať priamo v cloude. Blokované obchody treba
 overiť lokálne alebo neskôr doplniť synchronizáciu lokálneho zberača s cloudom.
+
+## Lokálny CAPTCHA zberač
+
+Na Windows spustite `start_collector.ps1`. Skript si bezpečne vypýta heslo
+cloudovej Riverdale aplikácie iba pre aktuálne spustenie, otvorí lokálnu aplikáciu
+na `http://127.0.0.1:5000` a heslo nezapíše do konfiguračného súboru.
+
+V lokálnej aplikácii vyberte priestor, miestnosť, kategóriu a typ produktu. V
+paneli ručného overenia kliknite na blokovaný obchod a dokončite CAPTCHA v
+otvorenom Chrome. Pomocník uloží produktové stránky, spracuje ich a cez HTTPS
+odošle maximálne 18 výsledkov do cloudovej aplikácie. Stav pri obchode zobrazí
+počet nájdených a synchronizovaných produktov.
+
+Spustenie:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start_collector.ps1
+```

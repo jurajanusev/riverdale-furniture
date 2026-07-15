@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import tempfile
 import unittest
@@ -315,7 +316,67 @@ class RiverdaleAppTest(unittest.TestCase):
         self.assertIn("Otvorilo sa ručné overenie".encode(), response.data)
         popen.assert_called_once()
         self.assertIn("verify_store.py", popen.call_args.args[0][1])
-        self.assertEqual(popen.call_args.args[0][-1], "komoda")
+        self.assertEqual(popen.call_args.args[0][-2], "komoda")
+        helper_context = json.loads(popen.call_args.args[0][-1])
+        self.assertEqual(helper_context["space_id"], "dom-betty")
+        self.assertEqual(helper_context["item_type"], "komoda")
+
+    def test_collector_import_requires_token_and_saves_valid_product(self):
+        payload = {"products": [{
+            "name": "Komoda z lokálneho zberača",
+            "space_id": "dom-betty", "room": "spálňa / izba",
+            "main_category": "nabytok", "item_type": "komoda",
+            "store": "Möbelix Slovensko", "country": "Slovensko",
+            "frame_price": 179.0, "sale_price": 179.0, "currency": "EUR",
+            "product_url": "https://www.moebelix.sk/p/komoda-riverdale-000000000001",
+            "image_url": "https://example.com/komoda.jpg", "availability": "Dostupné",
+        }]}
+        with patch.dict(os.environ, {"RIVERDALE_ADMIN_PASSWORD": "cloud-secret"}):
+            self.assertEqual(self.client.post("/api/collector/products", json=payload).status_code, 401)
+            response = self.client.post(
+                "/api/collector/products", json=payload,
+                headers={"Authorization": "Bearer cloud-secret"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["imported"], 1)
+        products = database.list_products({"store": "Möbelix Slovensko"})
+        self.assertEqual(len(products), 1)
+        self.assertEqual(products[0].item_type, "komoda")
+        self.assertEqual(products[0].approval_status, "unreviewed")
+
+    def test_collector_import_rejects_forged_store_url(self):
+        payload = {"products": [{
+            "name": "Falošný produkt", "store": "Möbelix Slovensko",
+            "product_url": "https://example.com/p/not-moebelix",
+        }]}
+        with patch.dict(os.environ, {"RIVERDALE_SYNC_TOKEN": "sync-secret"}):
+            response = self.client.post(
+                "/api/collector/products", json=payload,
+                headers={"Authorization": "Bearer sync-secret"},
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["imported"], 0)
+
+    @patch("verify_store.requests.post")
+    def test_local_collector_sends_products_with_bearer_token(self, post):
+        from verify_store import sync_to_cloud
+
+        post.return_value.raise_for_status.return_value = None
+        post.return_value.json.return_value = {"ok": True, "imported": 2}
+        with patch.dict(os.environ, {
+            "RIVERDALE_CLOUD_URL": "https://riverdale-furniture.onrender.com/",
+            "RIVERDALE_SYNC_TOKEN": "collector-secret",
+        }):
+            synced, error = sync_to_cloud([{"name": "A"}, {"name": "B"}])
+        self.assertEqual((synced, error), (2, ""))
+        self.assertEqual(
+            post.call_args.kwargs["headers"]["Authorization"],
+            "Bearer collector-secret",
+        )
+        self.assertEqual(
+            post.call_args.args[0],
+            "https://riverdale-furniture.onrender.com/api/collector/products",
+        )
 
     def test_verified_browser_cache_is_used_before_network(self):
         import scrapers.base as base_module

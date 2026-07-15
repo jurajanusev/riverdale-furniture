@@ -10,6 +10,8 @@ from pathlib import Path
 from urllib.parse import urljoin
 from urllib.request import urlopen
 
+import requests
+
 from bs4 import BeautifulSoup
 from playwright.sync_api import Error, sync_playwright
 
@@ -74,14 +76,43 @@ def wait_for_debugging(port, timeout_seconds=20):
     return False
 
 
+def sync_to_cloud(products):
+    cloud_url = os.environ.get("RIVERDALE_CLOUD_URL", "").strip().rstrip("/")
+    token = os.environ.get("RIVERDALE_SYNC_TOKEN", "").strip()
+    if not cloud_url or not token:
+        return 0, "Synchronizácia nie je nakonfigurovaná."
+    try:
+        response = requests.post(
+            f"{cloud_url}/api/collector/products",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"products": products}, timeout=45,
+        )
+        response.raise_for_status()
+        result = response.json()
+        return int(result.get("imported", 0)), ""
+    except (requests.RequestException, ValueError, TypeError) as exc:
+        detail = ""
+        if getattr(exc, "response", None) is not None:
+            try:
+                detail = exc.response.json().get("error", "")
+            except ValueError:
+                detail = exc.response.text[:200]
+        return 0, detail or str(exc)
+
+
 def main():
-    if len(sys.argv) != 4:
-        raise SystemExit("Použitie: verify_store.py OBCHOD URL TYP_POLOŽKY")
-    store, url, item_type = sys.argv[1:]
+    if len(sys.argv) not in {4, 5}:
+        raise SystemExit("Použitie: verify_store.py OBCHOD URL TYP_POLOŽKY [KONTEXT_JSON]")
+    store, url, item_type = sys.argv[1:4]
+    try:
+        context = json.loads(sys.argv[4]) if len(sys.argv) == 5 else {"item_type": item_type}
+    except (ValueError, TypeError):
+        context = {"item_type": item_type}
+    context["item_type"] = item_type
     scraper_class = next((cls for cls in SCRAPERS if cls.store == store), None)
     if not scraper_class:
         raise SystemExit("Neznámy obchod")
-    scraper = scraper_class(criteria={"item_type": item_type})
+    scraper = scraper_class(criteria=context)
     profile = browser_profile_dir(store)
     profile.mkdir(parents=True, exist_ok=True)
     state_path = profile / "riverdale-state.json"
@@ -144,7 +175,15 @@ def main():
                 cached += 1
                 context.storage_state(path=str(state_path))
                 save_status(profile, state="caching_products", store=store, cached=cached, total=len(product_urls))
-            save_status(profile, state="complete", store=store, cached=cached, total=len(product_urls))
+            products = scraper.search()
+            synced, sync_error = sync_to_cloud(products)
+            status = {
+                "state": "complete", "store": store, "cached": cached,
+                "total": len(product_urls), "found": len(products), "synced": synced,
+            }
+            if sync_error:
+                status["sync_error"] = sync_error
+            save_status(profile, **status)
             page.wait_for_timeout(1_500)
         finally:
             try:

@@ -23,6 +23,7 @@ from database import (
 from riverdale_catalog import CATEGORIES, CATEGORY_BY_ID, DEFAULT_CONTEXT, SPACES, SPACE_BY_ID, validate_context
 from scrapers import SCRAPERS, search_all
 from scrapers.base import browser_profile_dir
+from models import Product
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -58,7 +59,7 @@ def create_app(test_config=None):
         password = os.environ.get("RIVERDALE_ADMIN_PASSWORD", "")
         if not password or session.get("riverdale_admin"):
             return None
-        public_endpoint = request.endpoint in {"login", "healthcheck", "static", "uploaded_image"}
+        public_endpoint = request.endpoint in {"login", "healthcheck", "static", "uploaded_image", "collector_import"}
         public_path = request.path.startswith("/architect/")
         if public_endpoint or public_path:
             return None
@@ -91,6 +92,55 @@ def create_app(test_config=None):
     @app.get("/media/<path:filename>")
     def uploaded_image(filename):
         return send_from_directory(UPLOAD_DIR, Path(filename).name)
+
+    @app.post("/api/collector/products")
+    def collector_import():
+        expected_token = os.environ.get("RIVERDALE_SYNC_TOKEN") or os.environ.get("RIVERDALE_ADMIN_PASSWORD", "")
+        authorization = request.headers.get("Authorization", "")
+        supplied_token = authorization[7:] if authorization.startswith("Bearer ") else ""
+        if not expected_token:
+            return jsonify(error="Cloud nemá nastavený synchronizačný kľúč."), 503
+        if not supplied_token or not secrets.compare_digest(supplied_token, expected_token):
+            return jsonify(error="Neplatný synchronizačný kľúč."), 401
+        payload = request.get_json(silent=True) or {}
+        raw_products = payload.get("products")
+        if not isinstance(raw_products, list) or not raw_products or len(raw_products) > 50:
+            return jsonify(error="Očakáva sa 1 až 50 produktov."), 400
+        scraper_by_store = {cls.store: cls for cls in SCRAPERS}
+        allowed_fields = set(Product.__dataclass_fields__) - {
+            "id", "internal_id", "created_at", "updated_at", "local_image",
+            "approval_status", "notes",
+        }
+        imported, rejected = 0, []
+        for position, raw in enumerate(raw_products, start=1):
+            if not isinstance(raw, dict):
+                rejected.append({"position": position, "reason": "Neplatný záznam"})
+                continue
+            store = str(raw.get("store", ""))
+            product_url = str(raw.get("product_url", "")).strip()
+            scraper_class = scraper_by_store.get(store)
+            context = validate_context(raw)
+            try:
+                valid_url = bool(scraper_class and scraper_class(criteria=context).is_product_url(product_url))
+            except (TypeError, ValueError):
+                valid_url = False
+            if not raw.get("name") or not valid_url:
+                rejected.append({"position": position, "reason": "Neplatný názov, obchod alebo URL"})
+                continue
+            product = {key: raw[key] for key in allowed_fields if key in raw}
+            product.update(context)
+            product.update({
+                "name": str(raw["name"]).strip()[:300],
+                "store": store,
+                "product_url": product_url,
+                "last_checked": str(raw.get("last_checked") or date.today().isoformat()),
+                "approval_status": "unreviewed",
+                "local_image": "",
+                "notes": "",
+            })
+            save_product(product)
+            imported += 1
+        return jsonify(ok=True, imported=imported, rejected=rejected), 200 if imported else 400
 
     @app.get("/")
     def index():
@@ -320,7 +370,10 @@ def create_app(test_config=None):
             return redirect(url_for("index", **context))
         try:
             subprocess.Popen(
-                [sys.executable, str(BASE_DIR / "verify_store.py"), store_name, target_url, context["item_type"]],
+                [
+                    sys.executable, str(BASE_DIR / "verify_store.py"), store_name,
+                    target_url, context["item_type"], json.dumps(context, ensure_ascii=False),
+                ],
                 cwd=BASE_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
@@ -328,7 +381,7 @@ def create_app(test_config=None):
             flash(f"Prehliadač sa nepodarilo spustiť: {exc}", "danger")
             return redirect(url_for("index", **context))
         flash(
-            f"Otvorilo sa ručné overenie pre {store_name}. Vyriešte CAPTCHA a okno nechajte otvorené; aplikácia načíta produkty v tej istej relácii a po dokončení okno zavrie sama.",
+            f"Otvorilo sa ručné overenie pre {store_name}. Vyriešte CAPTCHA a okno nechajte otvorené; po dokončení sa produkty automaticky odošlú do cloudu, ak bol lokálny zberač spustený cez start_collector.ps1.",
             "info",
         )
         return redirect(url_for("index", **{key: context[key] for key in ("space_id", "room", "main_category", "item_type")}))
