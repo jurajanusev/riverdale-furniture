@@ -7,15 +7,35 @@ $project = Split-Path -Parent $MyInvocation.MyCommand.Path
 $python = Join-Path $project ".venv\Scripts\python.exe"
 
 if (-not (Test-Path -LiteralPath $python)) {
-    throw "Virtuálne prostredie nebolo nájdené. Najprv nainštalujte aplikáciu podľa README.md."
+    throw "Virtualne prostredie nebolo najdene. Najprv nainstalujte aplikaciu podla README.md."
 }
 
 $listener = Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue
 if ($listener) {
-    throw "Port 5000 už používa iná lokálna aplikácia. Zastavte pôvodnú Riverdale aplikáciu a spustite zberač znova."
+    $riverdaleRunning = $false
+    try {
+        $existingPage = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:5000/" -TimeoutSec 3
+        $riverdaleRunning = $existingPage.Content -match "<title>Riverdale Product Finder</title>"
+    }
+    catch { }
+    if (-not $riverdaleRunning) {
+        throw "Port 5000 pouziva ina aplikacia. Zastavte ju a spustite zberac znova."
+    }
+    Write-Host "Nasla sa starsia lokalna Riverdale. Zastavujem ju..."
+    $listener.OwningProcess | Sort-Object -Unique | ForEach-Object {
+        Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue
+    }
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        Start-Sleep -Milliseconds 250
+        if (-not (Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue)) { break }
+    }
+    if (Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue) {
+        throw "Starsiu Riverdale sa nepodarilo zastavit. Zatvorte jej terminal a skuste to znova."
+    }
 }
 
-$securePassword = Read-Host "Zadajte prihlasovacie heslo cloudovej Riverdale aplikácie" -AsSecureString
+Write-Host "Teraz zadajte NOVE prihlasovacie heslo cloudovej Riverdale aplikacie. Znaky sa nebudu zobrazovat."
+$securePassword = Read-Host "Heslo" -AsSecureString
 $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
 try {
     $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
@@ -42,11 +62,11 @@ try {
     if (-not $ready) {
         $detail = if (Test-Path -LiteralPath $stderrLog) { (Get-Content -LiteralPath $stderrLog -Raw).Trim() } else { "" }
         if (-not $process.HasExited) { Stop-Process -Id $process.Id }
-        throw "Lokálny zberač sa nepodarilo spustiť. $detail"
+        throw "Lokalny zberac sa nepodarilo spustit. $detail"
     }
     Start-Process "http://127.0.0.1:5000"
-    Write-Host "Lokálny zberač beží. CAPTCHA produkty sa odošlú do $CloudUrl."
-    Write-Host "Toto okno nechajte otvorené. Zberač zastavíte klávesmi Ctrl+C."
+    Write-Host "Lokalny zberac bezi. CAPTCHA produkty sa odoslu do $CloudUrl."
+    Write-Host "Toto okno nechajte otvorene. Zberac zastavite klavesmi Ctrl+C."
     try {
         while (-not $process.HasExited) {
             Start-Sleep -Seconds 2
