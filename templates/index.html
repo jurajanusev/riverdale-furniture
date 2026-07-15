@@ -44,19 +44,19 @@
           </select>
         </label>
         <label>Typ položky<select name="item_type" data-item-type-select data-current="{{ context.item_type }}"></select></label>
-        <label>Min. cena<input name="search_min_price" type="number" min="0" step="1" placeholder="Od 0 €"></label>
-        <label>Max. cena<input name="search_max_price" type="number" min="0" step="1" placeholder="Bez limitu"></label>
-        <label>Farba<input name="search_color" placeholder="Ľubovoľná"></label>
-        <label>Materiál<input name="search_material" placeholder="Ľubovoľný"></label>
-        <label>Dostupnosť<select name="search_in_stock"><option value="">Všetky</option><option value="yes">Iba dostupné</option></select></label>
-        <label data-dimension-filter>Min. šírka (cm)<input name="search_min_width" type="number" min="0" step="1" placeholder="Bez minima"></label>
-        <label data-dimension-filter>Max. šírka (cm)<input name="search_max_width" type="number" min="0" step="1" placeholder="Bez maxima"></label>
-        <label data-dimension-filter>Max. hĺbka (cm)<input name="search_max_depth" type="number" min="0" step="1" placeholder="Bez maxima"></label>
-        <label data-dimension-filter>Max. výška (cm)<input name="search_max_height" type="number" min="0" step="1" placeholder="Bez maxima"></label>
-        <label data-bed-filter>Rozmer postele – šírka<select name="search_bed_width"><option value="">Všetky</option>{% for width in (80, 90, 100, 120, 140, 160, 180, 200) %}<option value="{{ width }}">{{ width }} cm</option>{% endfor %}</select></label>
-        <label data-bed-filter>Rozmer postele – dĺžka<select name="search_bed_length"><option value="">Všetky</option>{% for length in (190, 200, 210) %}<option value="{{ length }}">{{ length }} cm</option>{% endfor %}</select></label>
-        <label data-bed-filter>Rošt<select name="search_slats_included"><option value="any">Nerozhoduje</option><option value="yes">V cene</option><option value="no">Bez roštu</option></select></label>
-        <label data-bed-filter>Matrac<select name="search_mattress_included"><option value="any">Nerozhoduje</option><option value="yes">V cene</option><option value="no">Bez matraca</option></select></label>
+        <label>Min. cena<input name="search_min_price" type="number" min="0" step="1" value="{{ search_values.search_min_price }}" placeholder="Od 0 €"></label>
+        <label>Max. cena<input name="search_max_price" type="number" min="0" step="1" value="{{ search_values.search_max_price }}" placeholder="Bez limitu"></label>
+        <label>Farba<input name="search_color" value="{{ search_values.search_color }}" placeholder="Ľubovoľná"></label>
+        <label>Materiál<input name="search_material" value="{{ search_values.search_material }}" placeholder="Ľubovoľný"></label>
+        <label>Dostupnosť<select name="search_in_stock"><option value="">Všetky</option><option value="yes" {% if search_values.search_in_stock == 'yes' %}selected{% endif %}>Iba dostupné</option></select></label>
+        <label data-dimension-filter>Min. šírka (cm)<input name="search_min_width" type="number" min="0" step="1" value="{{ search_values.search_min_width }}" placeholder="Bez minima"></label>
+        <label data-dimension-filter>Max. šírka (cm)<input name="search_max_width" type="number" min="0" step="1" value="{{ search_values.search_max_width }}" placeholder="Bez maxima"></label>
+        <label data-dimension-filter>Max. hĺbka (cm)<input name="search_max_depth" type="number" min="0" step="1" value="{{ search_values.search_max_depth }}" placeholder="Bez maxima"></label>
+        <label data-dimension-filter>Max. výška (cm)<input name="search_max_height" type="number" min="0" step="1" value="{{ search_values.search_max_height }}" placeholder="Bez maxima"></label>
+        <label data-bed-filter>Rozmer postele – šírka<select name="search_bed_width"><option value="">Všetky</option>{% for width in (80, 90, 100, 120, 140, 160, 180, 200) %}<option value="{{ width }}" {% if search_values.search_bed_width == width|string %}selected{% endif %}>{{ width }} cm</option>{% endfor %}</select></label>
+        <label data-bed-filter>Rozmer postele – dĺžka<select name="search_bed_length"><option value="">Všetky</option>{% for length in (190, 200, 210) %}<option value="{{ length }}" {% if search_values.search_bed_length == length|string %}selected{% endif %}>{{ length }} cm</option>{% endfor %}</select></label>
+        <label data-bed-filter>Rošt<select name="search_slats_included"><option value="any">Nerozhoduje</option><option value="yes" {% if search_values.search_slats_included == 'yes' %}selected{% endif %}>V cene</option><option value="no" {% if search_values.search_slats_included == 'no' %}selected{% endif %}>Bez roštu</option></select></label>
+        <label data-bed-filter>Matrac<select name="search_mattress_included"><option value="any">Nerozhoduje</option><option value="yes" {% if search_values.search_mattress_included == 'yes' %}selected{% endif %}>V cene</option><option value="no" {% if search_values.search_mattress_included == 'no' %}selected{% endif %}>Bez matraca</option></select></label>
         <button class="button primary search-submit" type="submit">Vyhľadať produkty</button>
       </form>
       <p class="search-hint">Kritériá bez zvolenej hodnoty neobmedzujú výsledky. Rozmerové filtre sa zobrazujú iba pri kategóriách, pri ktorých ho obchody a produktové stránky bežne uvádzajú.</p>
@@ -67,12 +67,12 @@
       <div class="captcha-content">
         {% if cloud_runtime %}
         <p><strong>CAPTCHA sa nedá vyriešiť priamo na serveri Render.</strong> Na svojom Windows počítači spusti súbor <code>start_collector.ps1</code> z priečinka aplikácie, zadaj heslo ku cloudovej aplikácii a potom otvor lokálny zberač. CAPTCHA sa zobrazí v tvojom Chrome a nájdené produkty sa automaticky odošlú sem do cloudu.</p>
-        <a class="button outline" target="_blank" rel="noopener" href="http://127.0.0.1:5000/?space_id={{ context.space_id|urlencode }}&room={{ context.room|urlencode }}&main_category={{ context.main_category|urlencode }}&item_type={{ context.item_type|urlencode }}">Otvoriť lokálny zberač</a>
+        <a class="button outline" data-local-collector-link target="_blank" rel="noopener" href="http://127.0.0.1:5000/">Otvoriť lokálny zberač</a>
         <small>Ak sa stránka neotvorí, najprv spusti <code>start_collector.ps1</code>.</small>
         {% else %}
         <p>Otvorí sa samostatné okno prehliadača. Vyrieš CAPTCHA a okno nechaj otvorené. Aplikácia v tej istej relácii uloží katalóg aj produktové stránky a po dokončení okno zavrie automaticky. Potom spusti vyhľadávanie.</p>
         <div class="captcha-actions">
-          {% for key, store in captcha_stores.items() %}<form action="{{ url_for('verify_store', store_key=key) }}" method="post">
+          {% for key, store in captcha_stores.items() %}<form class="captcha-store-form" action="{{ url_for('verify_store', store_key=key) }}" method="post">
             <input type="hidden" name="space_id" value="{{ context.space_id }}"><input type="hidden" name="room" value="{{ context.room }}"><input type="hidden" name="main_category" value="{{ context.main_category }}"><input type="hidden" name="item_type" value="{{ context.item_type }}">
             <button class="button outline" type="submit">{{ store }}</button>
             {% set status = captcha_statuses[key] %}{% if status.state == 'complete' %}<small>Pripravené: {{ status.cached }}; do cloudu: {{ status.synced|default(0) }}{% if status.sync_error %} — chyba: {{ status.sync_error }}{% endif %}</small>{% elif status.state in ('opening', 'waiting_for_captcha', 'caching_products') %}<small>Prebieha{% if status.cached is defined %}: {{ status.cached }}{% endif %}</small>{% elif status.state == 'cancelled' %}<small>Nedokončené</small>{% elif status.state == 'error' %}<small>Chyba: {{ status.error }}</small>{% endif %}

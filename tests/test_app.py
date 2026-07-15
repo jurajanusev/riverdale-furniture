@@ -321,6 +321,8 @@ class RiverdaleAppTest(unittest.TestCase):
         response = self.client.post("/verify-store/moebelix-sk", data={
             "space_id": "dom-betty", "room": "spálňa / izba",
             "main_category": "nabytok", "item_type": "komoda",
+            "search_max_price": "350", "search_color": "hnedá",
+            "search_in_stock": "yes", "search_min_width": "80",
         }, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn("Otvorilo sa ručné overenie".encode(), response.data)
@@ -330,6 +332,12 @@ class RiverdaleAppTest(unittest.TestCase):
         helper_context = json.loads(popen.call_args.args[0][-1])
         self.assertEqual(helper_context["space_id"], "dom-betty")
         self.assertEqual(helper_context["item_type"], "komoda")
+        self.assertEqual(helper_context["max_price"], 350.0)
+        self.assertEqual(helper_context["color"], "hnedá")
+        self.assertTrue(helper_context["in_stock"])
+        self.assertEqual(helper_context["min_width"], 80.0)
+        self.assertIn(b'name="search_max_price"', response.data)
+        self.assertIn(b'value="350"', response.data)
 
     @patch("app.subprocess.Popen")
     def test_cloud_captcha_uses_local_collector_instead_of_server_browser(self, popen):

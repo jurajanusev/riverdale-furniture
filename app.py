@@ -43,6 +43,50 @@ CAPTCHA_STORES = {
     "xxxlutz-sk": "XXXLutz Slovensko", "xxxlutz-at": "XXXLutz Rakúsko",
     "moemax-at": "Mömax Rakúsko", "sconto-sk": "Sconto Slovensko",
 }
+SEARCH_FORM_FIELDS = (
+    "search_min_price", "search_max_price", "search_color", "search_material",
+    "search_in_stock", "search_min_width", "search_max_width", "search_max_depth",
+    "search_max_height", "search_bed_width", "search_bed_length",
+    "search_slats_included", "search_mattress_included",
+)
+
+
+def search_form_values(values):
+    return {key: str(values.get(key, "")).strip() for key in SEARCH_FORM_FIELDS}
+
+
+def search_criteria(values):
+    context = validate_context(values)
+    numeric_fields = {
+        "search_min_price": "min_price", "search_max_price": "max_price",
+        "search_min_width": "min_width", "search_max_width": "max_width",
+        "search_max_depth": "max_depth", "search_max_height": "max_height",
+    }
+    numbers = {}
+    for form_key, criteria_key in numeric_fields.items():
+        value = str(values.get(form_key, "")).strip()
+        if not value:
+            numbers[criteria_key] = ""
+            continue
+        try:
+            number = float(value.replace(",", "."))
+            if number < 0:
+                raise ValueError
+            numbers[criteria_key] = number
+        except ValueError as exc:
+            raise ValueError("Cena a rozmery musia byť nezáporné čísla.") from exc
+    if numbers["min_price"] != "" and numbers["max_price"] != "" and numbers["min_price"] > numbers["max_price"]:
+        raise ValueError("Minimálna cena nemôže byť vyššia ako maximálna cena.")
+    return {
+        **context, **numbers,
+        "color": str(values.get("search_color", "")).strip(),
+        "material": str(values.get("search_material", "")).strip(),
+        "in_stock": values.get("search_in_stock") == "yes",
+        "bed_width": str(values.get("search_bed_width", "")).strip(),
+        "bed_length": str(values.get("search_bed_length", "")).strip(),
+        "slats_included": values.get("search_slats_included", "any"),
+        "mattress_included": values.get("search_mattress_included", "any"),
+    }
 
 
 def create_app(test_config=None):
@@ -171,6 +215,7 @@ def create_app(test_config=None):
             category_by_id=CATEGORY_BY_ID, selection_count=selection_count,
             captcha_stores=CAPTCHA_STORES, captcha_statuses=captcha_statuses,
             cloud_runtime=is_cloud_runtime(),
+            search_values=search_form_values(request.args),
         )
 
     @app.get("/selection")
@@ -320,44 +365,16 @@ def create_app(test_config=None):
     @app.post("/search")
     def search_products():
         context = validate_context(request.form)
-        numeric_fields = {
-            "search_min_price": "min_price", "search_max_price": "max_price",
-            "search_min_width": "min_width", "search_max_width": "max_width",
-            "search_max_depth": "max_depth", "search_max_height": "max_height",
-        }
-        numbers = {}
-        for form_key, criteria_key in numeric_fields.items():
-            value = request.form.get(form_key, "").strip()
-            if not value:
-                numbers[criteria_key] = ""
-                continue
-            try:
-                number = float(value.replace(",", "."))
-                if number < 0:
-                    raise ValueError
-                numbers[criteria_key] = number
-            except ValueError:
-                flash("Cena a rozmery musia byť nezáporné čísla.", "danger")
-                return redirect(url_for("index", **context))
-        if numbers["min_price"] != "" and numbers["max_price"] != "" and numbers["min_price"] > numbers["max_price"]:
-            flash("Minimálna cena nemôže byť vyššia ako maximálna cena.", "danger")
-            return redirect(url_for("index", **context))
-        criteria = {
-            **context,
-            **numbers,
-            "color": request.form.get("search_color", "").strip(),
-            "material": request.form.get("search_material", "").strip(),
-            "in_stock": request.form.get("search_in_stock") == "yes",
-            "bed_width": request.form.get("search_bed_width", "").strip(),
-            "bed_length": request.form.get("search_bed_length", "").strip(),
-            "slats_included": request.form.get("search_slats_included", "any"),
-            "mattress_included": request.form.get("search_mattress_included", "any"),
-        }
+        try:
+            criteria = search_criteria(request.form)
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            return redirect(url_for("index", **context, **search_form_values(request.form)))
         products, messages = search_all(criteria)
         for product in products:
             save_product(product)
         flash("; ".join(messages), "info")
-        return redirect(url_for("index", **{key: context[key] for key in ("space_id", "room", "main_category", "item_type")}))
+        return redirect(url_for("index", **context, **search_form_values(request.form)))
 
     @app.post("/verify-store/<store_key>")
     def verify_store(store_key):
@@ -374,7 +391,12 @@ def create_app(test_config=None):
         if not scraper_class:
             flash("Neznámy obchod pre ručné overenie.", "danger")
             return redirect(url_for("index", **context))
-        scraper = scraper_class(criteria=context)
+        try:
+            criteria = search_criteria(request.form)
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            return redirect(url_for("index", **context, **search_form_values(request.form)))
+        scraper = scraper_class(criteria=criteria)
         target_url = scraper.catalog_url_for_search()
         if not target_url:
             flash("Pre túto kategóriu obchod nemá pripravenú cieľovú stránku.", "danger")
@@ -383,7 +405,7 @@ def create_app(test_config=None):
             subprocess.Popen(
                 [
                     sys.executable, str(BASE_DIR / "verify_store.py"), store_name,
-                    target_url, context["item_type"], json.dumps(context, ensure_ascii=False),
+                    target_url, context["item_type"], json.dumps(criteria, ensure_ascii=False),
                 ],
                 cwd=BASE_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
@@ -395,7 +417,7 @@ def create_app(test_config=None):
             f"Otvorilo sa ručné overenie pre {store_name}. Vyriešte CAPTCHA a okno nechajte otvorené; po dokončení sa produkty automaticky odošlú do cloudu, ak bol lokálny zberač spustený cez start_collector.ps1.",
             "info",
         )
-        return redirect(url_for("index", **{key: context[key] for key in ("space_id", "room", "main_category", "item_type")}))
+        return redirect(url_for("index", **context, **search_form_values(request.form)))
 
     @app.post("/refresh")
     def refresh_prices():

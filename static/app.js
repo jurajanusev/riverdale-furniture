@@ -43,6 +43,33 @@ document.querySelectorAll('.context-form').forEach(form => {
   updateCriteria();
 });
 
+const searchForm = document.querySelector('.search-form');
+const copySearchCriteria = target => {
+  if (!searchForm) return;
+  for (const field of searchForm.elements) {
+    if (!field.name || field.type === 'submit') continue;
+    let copy = target.elements.namedItem(field.name);
+    if (!copy) {
+      copy = document.createElement('input');
+      copy.type = 'hidden';
+      copy.name = field.name;
+      target.append(copy);
+    }
+    copy.value = field.value;
+  }
+};
+
+document.querySelectorAll('.captcha-store-form').forEach(form => {
+  form.addEventListener('submit', () => copySearchCriteria(form));
+});
+
+document.querySelectorAll('[data-local-collector-link]').forEach(link => {
+  link.addEventListener('click', () => {
+    const params = new URLSearchParams(new FormData(searchForm));
+    link.href = `http://127.0.0.1:5000/?${params}`;
+  });
+});
+
 document.querySelectorAll('.product-card').forEach(card => {
   const save = async status => {
     const previousStatus = [...card.classList].find(c => c.startsWith('status-'))?.replace('status-', '');
