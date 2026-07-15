@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import database
+from itsdangerous import URLSafeTimedSerializer
 from app import create_app
 from scrapers import SCRAPERS, scraper_error_message
 from scrapers.base import BaseScraper
@@ -360,6 +361,8 @@ class RiverdaleAppTest(unittest.TestCase):
                 "space_id": "dom-betty", "room": "spálňa / izba",
                 "main_category": "nabytok", "item_type": "posteľ",
                 "search_max_price": "500", "search_bed_width": "90",
+                "collector_token": "short-lived-token",
+                "collector_cloud_url": "https://riverdale-furniture.onrender.com",
             },
             environ_base={"REMOTE_ADDR": "127.0.0.1"},
         )
@@ -369,6 +372,7 @@ class RiverdaleAppTest(unittest.TestCase):
         helper_context = json.loads(popen.call_args.args[0][-1])
         self.assertEqual(helper_context["max_price"], 500.0)
         self.assertEqual(helper_context["bed_width"], "90")
+        self.assertEqual(helper_context["collector_token"], "short-lived-token")
 
     def test_collector_import_requires_token_and_saves_valid_product(self):
         payload = {"products": [{
@@ -405,6 +409,21 @@ class RiverdaleAppTest(unittest.TestCase):
             )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["imported"], 0)
+
+    def test_short_lived_cloud_token_imports_without_admin_password(self):
+        token = URLSafeTimedSerializer("test", salt="riverdale-collector").dumps({"purpose": "collector"})
+        response = self.client.post(
+            "/api/collector/products",
+            json={"products": [{
+                "name": "Posteľ z CAPTCHA", "store": "Möbelix Slovensko",
+                "product_url": "https://www.moebelix.sk/p/postel-riverdale-000000000001",
+                "space_id": "dom-betty", "room": "spálňa / izba",
+                "main_category": "nabytok", "item_type": "posteľ",
+            }]},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["imported"], 1)
 
     @patch("verify_store.requests.post")
     def test_local_collector_sends_products_with_bearer_token(self, post):

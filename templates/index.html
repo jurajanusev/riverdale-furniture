@@ -68,7 +68,7 @@
         {% if cloud_runtime %}
         <p><strong>Zostaň na tejto cloudovej stránke.</strong> Vyplň kritériá vyššie a klikni na obchod. Lokálny zberač otvorí priamo Chrome s CAPTCHA; pomocné okno sa samo zavrie a produkty sa po overení odošlú sem.</p>
         <div class="captcha-actions">
-          {% for key, store in captcha_stores.items() %}<a class="button outline" data-local-verify-store="{{ key }}" target="_blank" rel="noopener" href="http://127.0.0.1:5000/local-verify-store/{{ key }}">{{ store }}</a>{% endfor %}
+          {% for key, store in captcha_stores.items() %}<a class="button outline" data-local-verify-store="{{ key }}" data-collector-token="{{ collector_token }}" data-collector-cloud-url="https://riverdale-furniture.onrender.com" target="_blank" rel="noopener" href="http://127.0.0.1:5000/local-verify-store/{{ key }}">{{ store }}</a>{% endfor %}
         </div>
         <small>Lokálny zberač musí bežať na pozadí. Ak tlačidlo nereaguje, spusti raz <code>start_collector.ps1</code>.</small>
         {% else %}

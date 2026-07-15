@@ -34,14 +34,7 @@ if ($listener) {
     }
 }
 
-Write-Host "Teraz zadajte NOVE prihlasovacie heslo cloudovej Riverdale aplikacie. Znaky sa nebudu zobrazovat."
-$securePassword = Read-Host "Heslo" -AsSecureString
-$pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
 try {
-    $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
-    $env:RIVERDALE_CLOUD_URL = $CloudUrl.TrimEnd("/")
-    $env:RIVERDALE_SYNC_TOKEN = $plainPassword
-
     $dataDir = Join-Path $project "data"
     New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
     $stdoutLog = Join-Path $dataDir "collector-server.log"
@@ -68,10 +61,5 @@ try {
     Write-Host "PowerShell mozte zavriet. CAPTCHA ovladajte priamo z cloudovej Riverdale."
 }
 finally {
-    $env:RIVERDALE_CLOUD_URL = $null
-    $env:RIVERDALE_SYNC_TOKEN = $null
-    $plainPassword = $null
-    if ($pointer -ne [IntPtr]::Zero) {
-        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
-    }
+    $process = $null
 }

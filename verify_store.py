@@ -76,9 +76,9 @@ def wait_for_debugging(port, timeout_seconds=20):
     return False
 
 
-def sync_to_cloud(products):
-    cloud_url = os.environ.get("RIVERDALE_CLOUD_URL", "").strip().rstrip("/")
-    token = os.environ.get("RIVERDALE_SYNC_TOKEN", "").strip()
+def sync_to_cloud(products, cloud_url="", token=""):
+    cloud_url = (cloud_url or os.environ.get("RIVERDALE_CLOUD_URL", "")).strip().rstrip("/")
+    token = (token or os.environ.get("RIVERDALE_SYNC_TOKEN", "")).strip()
     if not cloud_url or not token:
         return 0, "Synchronizácia nie je nakonfigurovaná."
     try:
@@ -176,7 +176,9 @@ def main():
                 context.storage_state(path=str(state_path))
                 save_status(profile, state="caching_products", store=store, cached=cached, total=len(product_urls))
             products = scraper.search()
-            synced, sync_error = sync_to_cloud(products)
+            synced, sync_error = sync_to_cloud(
+                products, context.get("collector_cloud_url", ""), context.get("collector_token", ""),
+            )
             status = {
                 "state": "complete", "store": store, "cached": cached,
                 "total": len(product_urls), "found": len(products), "synced": synced,

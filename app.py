@@ -14,6 +14,7 @@ from flask import Flask, flash, jsonify, redirect, render_template, request, sen
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from database import (
     architect_choice_counts, architect_choice_ids, create_share_link, delete_product,
@@ -94,6 +95,7 @@ def create_app(test_config=None):
     app.config.update(SECRET_KEY=os.environ.get("RIVERDALE_SECRET", secrets.token_hex(16)), MAX_CONTENT_LENGTH=8 * 1024 * 1024)
     if test_config:
         app.config.update(test_config)
+    collector_signer = URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="riverdale-collector")
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     init_db()
@@ -145,9 +147,14 @@ def create_app(test_config=None):
         expected_token = os.environ.get("RIVERDALE_SYNC_TOKEN") or os.environ.get("RIVERDALE_ADMIN_PASSWORD", "")
         authorization = request.headers.get("Authorization", "")
         supplied_token = authorization[7:] if authorization.startswith("Bearer ") else ""
-        if not expected_token:
-            return jsonify(error="Cloud nemá nastavený synchronizačný kľúč."), 503
-        if not supplied_token or not secrets.compare_digest(supplied_token, expected_token):
+        static_valid = bool(expected_token and supplied_token and secrets.compare_digest(supplied_token, expected_token))
+        signed_valid = False
+        if supplied_token and not static_valid:
+            try:
+                signed_valid = collector_signer.loads(supplied_token, max_age=7200).get("purpose") == "collector"
+            except (BadSignature, SignatureExpired, AttributeError):
+                signed_valid = False
+        if not static_valid and not signed_valid:
             return jsonify(error="Neplatný synchronizačný kľúč."), 401
         payload = request.get_json(silent=True) or {}
         raw_products = payload.get("products")
@@ -216,6 +223,7 @@ def create_app(test_config=None):
             captcha_stores=CAPTCHA_STORES, captcha_statuses=captcha_statuses,
             cloud_runtime=is_cloud_runtime(),
             search_values=search_form_values(request.args),
+            collector_token=collector_signer.dumps({"purpose": "collector"}) if is_cloud_runtime() else "",
         )
 
     @app.get("/selection")
@@ -433,6 +441,13 @@ def create_app(test_config=None):
         except ValueError as exc:
             return str(exc), 400
         scraper = scraper_class(criteria=criteria)
+        collector_token = request.args.get("collector_token", "").strip()
+        collector_cloud_url = request.args.get("collector_cloud_url", "").strip().rstrip("/")
+        cloud_parts = urlparse(collector_cloud_url)
+        if not collector_token or cloud_parts.scheme != "https" or cloud_parts.hostname != "riverdale-furniture.onrender.com":
+            return "Neplatné cloudové prepojenie. Obnovte cloudovú stránku.", 400
+        criteria["collector_token"] = collector_token
+        criteria["collector_cloud_url"] = collector_cloud_url
         target_url = scraper.catalog_url_for_search()
         if not target_url:
             return "Pre túto kategóriu obchod nemá cieľovú stránku.", 400

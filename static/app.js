@@ -66,6 +66,8 @@ document.querySelectorAll('.captcha-store-form').forEach(form => {
 document.querySelectorAll('[data-local-verify-store]').forEach(link => {
   link.addEventListener('click', () => {
     const params = new URLSearchParams(new FormData(searchForm));
+    params.set('collector_token', link.dataset.collectorToken);
+    params.set('collector_cloud_url', link.dataset.collectorCloudUrl);
     link.href = `http://127.0.0.1:5000/local-verify-store/${link.dataset.localVerifyStore}?${params}`;
   });
 });
