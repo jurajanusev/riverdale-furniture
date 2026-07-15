@@ -26,6 +26,19 @@ SCRAPERS = [
 ]
 
 
+def scraper_error_message(exc):
+    """Return a short, user-facing explanation instead of a Playwright traceback."""
+    message = " ".join(str(exc).split())
+    lowered = message.lower()
+    if "executable doesn't exist" in lowered or "playwright install" in lowered:
+        return "cloudový prehliadač nie je pripravený"
+    if "captcha" in lowered or "manual verification" in lowered:
+        return "stránka vyžaduje CAPTCHA alebo manuálne overenie"
+    if not message:
+        return "neznáma chyba"
+    return message[:217] + "..." if len(message) > 220 else message
+
+
 def search_all(criteria=None):
     def run(scraper_class):
         scraper = scraper_class(criteria=criteria)
@@ -37,7 +50,7 @@ def search_all(criteria=None):
                 message = f"{scraper.store}: {len(found)} vhodných produktov"
             return found, message
         except Exception as exc:
-            return [], f"{scraper.store}: nepodarilo sa načítať ({exc})"
+            return [], f"{scraper.store}: nepodarilo sa načítať ({scraper_error_message(exc)})"
 
     products, messages = [], []
     with ThreadPoolExecutor(max_workers=5) as executor:

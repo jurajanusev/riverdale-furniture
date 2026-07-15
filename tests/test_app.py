@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import database
 from app import create_app
-from scrapers import SCRAPERS
+from scrapers import SCRAPERS, scraper_error_message
 from scrapers.base import BaseScraper
 
 
@@ -257,6 +257,16 @@ class RiverdaleAppTest(unittest.TestCase):
         self.assertTrue(all(urls.values()), urls)
         ikea_at = next(scraper for scraper in SCRAPERS if scraper.store == "IKEA Rakúsko")
         self.assertIn("Sessel", ikea_at(criteria={"item_type": "kreslo"}).catalog_url_for_search())
+
+    def test_playwright_install_error_is_shortened_for_users(self):
+        error = RuntimeError(
+            "BrowserType.launch_persistent_context: Executable doesn't exist at /tmp/chrome "
+            "Please run the following command to download new browsers: playwright install"
+        )
+        self.assertEqual(
+            scraper_error_message(error),
+            "cloudový prehliadač nie je pripravený",
+        )
 
     def test_ikea_and_jysk_use_direct_chest_of_drawers_categories(self):
         from scrapers.ikea_sk import IkeaSlovakiaScraper

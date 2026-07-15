@@ -4,13 +4,15 @@ services:
     runtime: python
     region: frankfurt
     plan: starter
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python -m playwright install chromium
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 180
     healthCheckPath: /healthz
     autoDeployTrigger: commit
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.8
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: "0"
       - key: RIVERDALE_SECRET
         generateValue: true
       - key: RIVERDALE_ADMIN_PASSWORD
