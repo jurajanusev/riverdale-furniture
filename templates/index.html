@@ -65,6 +65,11 @@
     <details class="captcha-panel panel">
       <summary><strong>Ručne overiť blokovaný obchod</strong><span>Pre Möbelix, XXXLutz, Mömax a Sconto</span></summary>
       <div class="captcha-content">
+        {% if cloud_runtime %}
+        <p><strong>CAPTCHA sa nedá vyriešiť priamo na serveri Render.</strong> Na svojom Windows počítači spusti súbor <code>start_collector.ps1</code> z priečinka aplikácie, zadaj heslo ku cloudovej aplikácii a potom otvor lokálny zberač. CAPTCHA sa zobrazí v tvojom Chrome a nájdené produkty sa automaticky odošlú sem do cloudu.</p>
+        <a class="button outline" target="_blank" rel="noopener" href="http://127.0.0.1:5000/?space_id={{ context.space_id|urlencode }}&room={{ context.room|urlencode }}&main_category={{ context.main_category|urlencode }}&item_type={{ context.item_type|urlencode }}">Otvoriť lokálny zberač</a>
+        <small>Ak sa stránka neotvorí, najprv spusti <code>start_collector.ps1</code>.</small>
+        {% else %}
         <p>Otvorí sa samostatné okno prehliadača. Vyrieš CAPTCHA a okno nechaj otvorené. Aplikácia v tej istej relácii uloží katalóg aj produktové stránky a po dokončení okno zavrie automaticky. Potom spusti vyhľadávanie.</p>
         <div class="captcha-actions">
           {% for key, store in captcha_stores.items() %}<form action="{{ url_for('verify_store', store_key=key) }}" method="post">
@@ -73,6 +78,7 @@
             {% set status = captcha_statuses[key] %}{% if status.state == 'complete' %}<small>Pripravené: {{ status.cached }}; do cloudu: {{ status.synced|default(0) }}{% if status.sync_error %} — chyba: {{ status.sync_error }}{% endif %}</small>{% elif status.state in ('opening', 'waiting_for_captcha', 'caching_products') %}<small>Prebieha{% if status.cached is defined %}: {{ status.cached }}{% endif %}</small>{% elif status.state == 'cancelled' %}<small>Nedokončené</small>{% elif status.state == 'error' %}<small>Chyba: {{ status.error }}</small>{% endif %}
           </form>{% endfor %}
         </div>
+        {% endif %}
       </div>
     </details>
 

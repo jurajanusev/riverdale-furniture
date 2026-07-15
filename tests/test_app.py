@@ -331,6 +331,19 @@ class RiverdaleAppTest(unittest.TestCase):
         self.assertEqual(helper_context["space_id"], "dom-betty")
         self.assertEqual(helper_context["item_type"], "komoda")
 
+    @patch("app.subprocess.Popen")
+    def test_cloud_captcha_uses_local_collector_instead_of_server_browser(self, popen):
+        with patch.dict(os.environ, {"RENDER": "true"}):
+            page = self.client.get("/")
+            response = self.client.post(
+                "/verify-store/moebelix-sk",
+                data={"space_id": "dom-betty", "room": "spálňa / izba", "item_type": "posteľ"},
+                follow_redirects=True,
+            )
+        self.assertIn(b"http://127.0.0.1:5000", page.data)
+        self.assertIn("CAPTCHA sa musí overiť na vašom počítači".encode(), response.data)
+        popen.assert_not_called()
+
     def test_collector_import_requires_token_and_saves_valid_product(self):
         payload = {"products": [{
             "name": "Komoda z lokálneho zberača",

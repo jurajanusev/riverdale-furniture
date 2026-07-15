@@ -54,6 +54,9 @@ def create_app(test_config=None):
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     init_db()
 
+    def is_cloud_runtime():
+        return bool(os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_ID"))
+
     @app.before_request
     def require_admin_login():
         password = os.environ.get("RIVERDALE_ADMIN_PASSWORD", "")
@@ -167,6 +170,7 @@ def create_app(test_config=None):
             spaces=SPACES, categories=CATEGORIES, space_by_id=SPACE_BY_ID,
             category_by_id=CATEGORY_BY_ID, selection_count=selection_count,
             captcha_stores=CAPTCHA_STORES, captcha_statuses=captcha_statuses,
+            cloud_runtime=is_cloud_runtime(),
         )
 
     @app.get("/selection")
@@ -358,6 +362,13 @@ def create_app(test_config=None):
     @app.post("/verify-store/<store_key>")
     def verify_store(store_key):
         context = validate_context(request.form)
+        if is_cloud_runtime():
+            flash(
+                "CAPTCHA sa musí overiť na vašom počítači. Spustite start_collector.ps1 "
+                "a ručné overenie použite v lokálnej aplikácii na http://127.0.0.1:5000.",
+                "info",
+            )
+            return redirect(url_for("index", **context))
         store_name = CAPTCHA_STORES.get(store_key)
         scraper_class = next((cls for cls in SCRAPERS if cls.store == store_name), None)
         if not scraper_class:
