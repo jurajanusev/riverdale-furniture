@@ -66,9 +66,11 @@
       <summary><strong>Ručne overiť blokovaný obchod</strong><span>Pre Möbelix, XXXLutz, Mömax a Sconto</span></summary>
       <div class="captcha-content">
         {% if cloud_runtime %}
-        <p><strong>CAPTCHA sa nedá vyriešiť priamo na serveri Render.</strong> Na svojom Windows počítači spusti súbor <code>start_collector.ps1</code> z priečinka aplikácie, zadaj heslo ku cloudovej aplikácii a potom otvor lokálny zberač. CAPTCHA sa zobrazí v tvojom Chrome a nájdené produkty sa automaticky odošlú sem do cloudu.</p>
-        <a class="button outline" data-local-collector-link target="_blank" rel="noopener" href="http://127.0.0.1:5000/">Otvoriť lokálny zberač</a>
-        <small>Ak sa stránka neotvorí, najprv spusti <code>start_collector.ps1</code>.</small>
+        <p><strong>Zostaň na tejto cloudovej stránke.</strong> Vyplň kritériá vyššie a klikni na obchod. Lokálny zberač otvorí priamo Chrome s CAPTCHA; pomocné okno sa samo zavrie a produkty sa po overení odošlú sem.</p>
+        <div class="captcha-actions">
+          {% for key, store in captcha_stores.items() %}<a class="button outline" data-local-verify-store="{{ key }}" target="_blank" rel="noopener" href="http://127.0.0.1:5000/local-verify-store/{{ key }}">{{ store }}</a>{% endfor %}
+        </div>
+        <small>Lokálny zberač musí bežať na pozadí. Ak tlačidlo nereaguje, spusti raz <code>start_collector.ps1</code>.</small>
         {% else %}
         <p>Otvorí sa samostatné okno prehliadača. Vyrieš CAPTCHA a okno nechaj otvorené. Aplikácia v tej istej relácii uloží katalóg aj produktové stránky a po dokončení okno zavrie automaticky. Potom spusti vyhľadávanie.</p>
         <div class="captcha-actions">

@@ -419,6 +419,43 @@ def create_app(test_config=None):
         )
         return redirect(url_for("index", **context, **search_form_values(request.form)))
 
+    @app.get("/local-verify-store/<store_key>")
+    def local_verify_store(store_key):
+        if is_cloud_runtime() or request.remote_addr not in {"127.0.0.1", "::1"}:
+            return "Lokálne overenie nie je dostupné.", 403
+        context = validate_context(request.args)
+        store_name = CAPTCHA_STORES.get(store_key)
+        scraper_class = next((cls for cls in SCRAPERS if cls.store == store_name), None)
+        if not scraper_class:
+            return "Neznámy obchod.", 404
+        try:
+            criteria = search_criteria(request.args)
+        except ValueError as exc:
+            return str(exc), 400
+        scraper = scraper_class(criteria=criteria)
+        target_url = scraper.catalog_url_for_search()
+        if not target_url:
+            return "Pre túto kategóriu obchod nemá cieľovú stránku.", 400
+        try:
+            subprocess.Popen(
+                [
+                    sys.executable, str(BASE_DIR / "verify_store.py"), store_name,
+                    target_url, context["item_type"], json.dumps(criteria, ensure_ascii=False),
+                ],
+                cwd=BASE_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        except OSError as exc:
+            return f"Prehliadač sa nepodarilo spustiť: {exc}", 500
+        return (
+            "<!doctype html><html lang='sk'><meta charset='utf-8'>"
+            f"<title>Riverdale – {store_name}</title>"
+            "<body style='font:16px sans-serif;padding:24px'>"
+            f"<p>Otváram CAPTCHA pre <strong>{store_name}</strong>…</p>"
+            "<p>Toto pomocné okno sa automaticky zavrie.</p>"
+            "<script>setTimeout(() => window.close(), 800);</script></body></html>"
+        )
+
     @app.post("/refresh")
     def refresh_prices():
         refreshed, failed = 0, 0

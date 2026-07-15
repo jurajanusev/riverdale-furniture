@@ -64,18 +64,8 @@ try {
         if (-not $process.HasExited) { Stop-Process -Id $process.Id }
         throw "Lokalny zberac sa nepodarilo spustit. $detail"
     }
-    Start-Process "http://127.0.0.1:5000"
     Write-Host "Lokalny zberac bezi. CAPTCHA produkty sa odoslu do $CloudUrl."
-    Write-Host "Toto okno nechajte otvorene. Zberac zastavite klavesmi Ctrl+C."
-    try {
-        while (-not $process.HasExited) {
-            Start-Sleep -Seconds 2
-            $process.Refresh()
-        }
-    }
-    finally {
-        if (-not $process.HasExited) { Stop-Process -Id $process.Id }
-    }
+    Write-Host "PowerShell mozte zavriet. CAPTCHA ovladajte priamo z cloudovej Riverdale."
 }
 finally {
     $env:RIVERDALE_CLOUD_URL = $null
