@@ -19,14 +19,30 @@ def write_status(path, **status):
 def run_search(criteria, status_path):
     status_path = Path(status_path).resolve()
     status_path.parent.mkdir(parents=True, exist_ok=True)
-    write_status(status_path, state="running", messages=[], criteria=criteria)
+    messages = []
+    imported = 0
+    write_status(
+        status_path, state="running", messages=messages, criteria=criteria,
+        imported=imported, completed_stores=0, total_stores=0,
+    )
     try:
-        products, messages = search_all(criteria)
-        for product in products:
-            save_product(product)
+        def save_progress(found, message, completed, total):
+            nonlocal imported
+            for product in found:
+                save_product(product)
+            imported += len(found)
+            messages.append(message)
+            write_status(
+                status_path, state="running", messages=messages,
+                criteria=criteria, imported=imported,
+                completed_stores=completed, total_stores=total,
+            )
+
+        products, messages = search_all(criteria, progress_callback=save_progress)
         write_status(
             status_path, state="complete", messages=messages,
-            imported=len(products), error="",
+            imported=imported, completed_stores=len(messages),
+            total_stores=len(messages), error="",
         )
     except Exception as exc:
         write_status(

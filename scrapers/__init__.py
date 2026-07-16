@@ -1,5 +1,5 @@
 import os
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .ikea_sk import IkeaSlovakiaScraper
 from .ikea_at import IkeaAustriaScraper
@@ -40,7 +40,7 @@ def scraper_error_message(exc):
     return message[:217] + "..." if len(message) > 220 else message
 
 
-def search_all(criteria=None):
+def search_all(criteria=None, progress_callback=None):
     def run(scraper_class):
         scraper = scraper_class(criteria=criteria)
         try:
@@ -59,7 +59,11 @@ def search_all(criteria=None):
     except ValueError:
         worker_count = 3
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
-        for found, message in executor.map(run, SCRAPERS):
+        futures = [executor.submit(run, scraper_class) for scraper_class in SCRAPERS]
+        for completed, future in enumerate(as_completed(futures), start=1):
+            found, message = future.result()
             products.extend(found)
             messages.append(message)
+            if progress_callback:
+                progress_callback(found, message, completed, len(futures))
     return products, messages

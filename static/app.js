@@ -12,6 +12,14 @@ if (searchJob && ['queued', 'running'].includes(searchJob.dataset.searchState)) 
       const response = await fetch(`/api/search-jobs/${searchJob.dataset.searchJob}`);
       if (!response.ok) return;
       const status = await response.json();
+      const progress = searchJob.querySelector('[data-search-progress]');
+      if (progress && status.state === 'running') {
+        const completed = Number(status.completed_stores || 0);
+        const total = Number(status.total_stores || 0);
+        progress.textContent = total
+          ? `Skontrolované obchody: ${completed}/${total}. Nájdené produkty: ${Number(status.imported || 0)}.`
+          : 'Vyhľadávanie prebieha na pozadí – spúšťa sa…';
+      }
       if (status.state === 'complete' || status.state === 'error') window.location.reload();
     } catch { }
   };

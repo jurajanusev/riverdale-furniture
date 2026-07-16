@@ -29,7 +29,7 @@
   <main>
     {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="notice {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
     {% if search_job %}<div class="notice {{ 'danger' if search_job.state == 'error' else 'info' }}" data-search-job="{{ search_job_id }}" data-search-state="{{ search_job.state }}">
-      {% if search_job.state in ('queued', 'running') %}Vyhľadávanie prebieha na pozadí. Stránku môžeš ďalej používať; výsledky sa načítajú automaticky.
+      {% if search_job.state in ('queued', 'running') %}<span data-search-progress>{% if search_job.completed_stores %}Skontrolované obchody: {{ search_job.completed_stores }}/{{ search_job.total_stores }}. Nájdené produkty: {{ search_job.imported }}.{% else %}Vyhľadávanie prebieha na pozadí – spúšťa sa…{% endif %}</span> Stránku môžeš ďalej používať; výsledky sa načítajú automaticky.
       {% elif search_job.state == 'complete' %}{{ search_job.messages|join('; ') }}
       {% else %}Vyhľadávanie sa nepodarilo dokončiť: {{ search_job.error }}{% endif %}
     </div>{% endif %}
