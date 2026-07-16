@@ -1,9 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Riverdale Collector",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Zozbiera výsledky z blokovaných obchodov a odošle ich do Riverdale.",
-  "permissions": ["tabs", "tabGroups", "storage"],
+  "permissions": ["tabs", "tabGroups", "storage", "scripting", "activeTab"],
+  "action": {
+    "default_title": "Pridať aktuálny produkt do Riverdale"
+  },
   "host_permissions": [
     "https://riverdale-furniture.onrender.com/*",
     "https://www.ikea.com/sk/sk/*",

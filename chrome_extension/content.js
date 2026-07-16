@@ -336,6 +336,17 @@ if (location.hostname === 'riverdale-furniture.onrender.com') {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'riverdale-open-product-dialog') {
+    if (!storeForPage() || !isLikelyProductPage()) {
+      sendResponse({ok: false, error: 'Otvorte konkrétnu produktovú stránku podporovaného obchodu.'});
+      return false;
+    }
+    addManualProductButton();
+    openRiverdaleProductDialog()
+      .then(() => sendResponse({ok: true}))
+      .catch(error => sendResponse({ok: false, error: error.message}));
+    return true;
+  }
   if (message?.type === 'riverdale-progress') {
     progressToast(message.message, message.kind);
     sendResponse({ok: true});

@@ -230,3 +230,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   return false;
 });
+
+chrome.action.onClicked.addListener(async tab => {
+  if (!tab?.id) return;
+  try {
+    let response;
+    try {
+      response = await chrome.tabs.sendMessage(tab.id, {type: 'riverdale-open-product-dialog'});
+    } catch { }
+    if (!response?.ok) {
+      await chrome.scripting.executeScript({target: {tabId: tab.id}, files: ['content.js']});
+      response = await chrome.tabs.sendMessage(tab.id, {type: 'riverdale-open-product-dialog'});
+    }
+    if (!response?.ok) throw new Error(response?.error || 'Táto stránka nie je podporovaná produktová stránka.');
+  } catch (error) {
+    try {
+      await chrome.scripting.executeScript({
+        target: {tabId: tab.id},
+        func: message => window.alert(`Riverdale Collector: ${message}`),
+        args: [error.message || 'Produkt sa nepodarilo načítať.']
+      });
+    } catch { }
+  }
+});

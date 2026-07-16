@@ -15,5 +15,9 @@ Na podporovanej produktovej stránke sa vľavo dole zobrazí tlačidlo
 **Pridať do Riverdale**. Po kliknutí vyberte projekt, miestnosť, kategóriu a typ.
 Produkt možno zároveň rovno schváliť do výberu miestnosti.
 
+Ak plávajúce tlačidlo Chrome na niektorej stránke nezobrazí, kliknite priamo na
+ikonu **R** doplnku vpravo hore. Dialóg na pridanie aktuálneho produktu sa otvorí
+aj bez osobitného povolenia trvalého prístupu k stránke.
+
 Pri inštalácii alebo aktualizácii doplnok otvorí chýbajúce podporované obchody
 a všetkých 13 kariet vloží do jednej zbalenej skupiny **Riverdale obchody**.
