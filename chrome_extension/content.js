@@ -2,9 +2,9 @@ const normalize = value => String(value || '')
   .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 function priceFrom(value) {
-  const matches = String(value || '').replace(/\u00a0/g, ' ').match(/\d[\d .]*(?:,\d{1,2})?\s*€/g);
+  const matches = String(value || '').replace(/\u00a0/g, ' ').match(/\d[\d .]*(?:[,.]\d{1,2})?\s*(?:€|EUR)/gi);
   if (!matches?.length) return null;
-  let raw = matches[0].replace('€', '').replace(/\s/g, '');
+  let raw = matches[0].replace(/€|EUR/gi, '').replace(/\s/g, '');
   if (raw.includes(',')) raw = raw.replace(/\./g, '').replace(',', '.');
   else if (/^\d{1,3}(?:\.\d{3})+$/.test(raw)) raw = raw.replace(/\./g, '');
   const number = Number(raw);
@@ -338,10 +338,6 @@ if (location.hostname === 'riverdale-furniture.onrender.com') {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'riverdale-open-product-dialog') {
-    if (!storeForPage() || !isLikelyProductPage()) {
-      sendResponse({ok: false, error: 'Otvorte konkrétnu produktovú stránku podporovaného obchodu.'});
-      return false;
-    }
     addManualProductButton();
     openRiverdaleProductDialog()
       .then(() => sendResponse({ok: true}))
