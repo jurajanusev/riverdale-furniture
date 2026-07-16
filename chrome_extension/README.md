@@ -10,3 +10,7 @@ Jednorazová inštalácia:
 Potom stačí v Riverdale vyplniť vyhľadávanie a kliknúť na tlačidlo automatického
 zberu blokovaných obchodov. Ak obchod zobrazí CAPTCHA, vyriešte ju v otvorenej
 karte; doplnok bude následne pokračovať automaticky.
+
+Na podporovanej produktovej stránke sa vľavo dole zobrazí tlačidlo
+**Pridať do Riverdale**. Po kliknutí vyberte projekt, miestnosť, kategóriu a typ.
+Produkt možno zároveň rovno schváliť do výberu miestnosti.

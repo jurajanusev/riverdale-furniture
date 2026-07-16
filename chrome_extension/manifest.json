@@ -1,29 +1,43 @@
 {
   "manifest_version": 3,
   "name": "Riverdale Collector",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Zozbiera výsledky z blokovaných obchodov a odošle ich do Riverdale.",
   "permissions": ["tabs", "storage"],
   "host_permissions": [
     "https://riverdale-furniture.onrender.com/*",
+    "https://www.ikea.com/sk/sk/*",
+    "https://www.ikea.com/at/de/*",
+    "https://jysk.sk/*",
+    "https://jysk.at/*",
     "https://www.moebelix.sk/*",
     "https://www.moebelix.at/*",
     "https://www.xxxlutz.sk/*",
     "https://www.xxxlutz.at/*",
     "https://www.moemax.at/*",
-    "https://www.sconto.sk/*"
+    "https://www.sconto.sk/*",
+    "https://www.bonami.sk/*",
+    "https://www.asko-nabytok.sk/*",
+    "https://favi.sk/*"
   ],
   "background": {"service_worker": "background.js"},
   "content_scripts": [
     {
       "matches": [
         "https://riverdale-furniture.onrender.com/*",
+        "https://www.ikea.com/sk/sk/*",
+        "https://www.ikea.com/at/de/*",
+        "https://jysk.sk/*",
+        "https://jysk.at/*",
         "https://www.moebelix.sk/*",
         "https://www.moebelix.at/*",
         "https://www.xxxlutz.sk/*",
         "https://www.xxxlutz.at/*",
         "https://www.moemax.at/*",
-        "https://www.sconto.sk/*"
+        "https://www.sconto.sk/*",
+        "https://www.bonami.sk/*",
+        "https://www.asko-nabytok.sk/*",
+        "https://favi.sk/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

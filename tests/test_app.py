@@ -458,6 +458,8 @@ class RiverdaleAppTest(unittest.TestCase):
             manifest = json.loads(bundle.read("manifest.json"))
         self.assertEqual(manifest["manifest_version"], 3)
         self.assertIn("https://www.moebelix.sk/*", manifest["host_permissions"])
+        self.assertIn("https://www.ikea.com/sk/sk/*", manifest["host_permissions"])
+        self.assertIn("https://www.asko-nabytok.sk/*", manifest["host_permissions"])
 
     def test_extension_search_plan_uses_store_search_and_german_term(self):
         token = URLSafeTimedSerializer("test", salt="riverdale-collector").dumps({"purpose": "collector"})
@@ -477,6 +479,39 @@ class RiverdaleAppTest(unittest.TestCase):
         moebelix_at = next(store for store in result["stores"] if store["store"] == "Möbelix Rakúsko")
         self.assertEqual(moebelix_at["search_term"], "Schminktisch")
         self.assertIn("Schminktisch", moebelix_at["url"])
+
+    def test_extension_can_add_open_product_directly_to_room_selection(self):
+        token = URLSafeTimedSerializer("test", salt="riverdale-collector").dumps({"purpose": "collector"})
+        headers = {"Authorization": f"Bearer {token}"}
+        catalog = self.client.get("/api/extension/catalog", headers=headers)
+        self.assertEqual(catalog.status_code, 200)
+        self.assertTrue(catalog.get_json()["spaces"])
+        response = self.client.post(
+            "/api/extension/product",
+            json={
+                "product": {
+                    "name": "MALM toaletný stolík",
+                    "store": "IKEA Slovensko", "country": "Slovensko",
+                    "product_url": "https://www.ikea.com/sk/sk/p/malm-toaletny-stolik-biela-10203610/",
+                    "image_url": "https://example.com/malm.jpg",
+                    "frame_price": 109.0, "sale_price": 109.0, "currency": "EUR",
+                },
+                "assignment": {
+                    "space_id": "dom-betty", "room": "spálňa / izba",
+                    "main_category": "nabytok", "item_type": "toaletný stolík",
+                },
+                "approved": True,
+            },
+            headers=headers,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["approved"])
+        products = database.list_products({
+            "space_id": "dom-betty", "room": "spálňa / izba",
+            "item_type": "toaletný stolík", "approval_status": "approved",
+        })
+        self.assertEqual(len(products), 1)
+        self.assertEqual(products[0].name, "MALM toaletný stolík")
 
     @patch("verify_store.requests.post")
     def test_local_collector_sends_products_with_bearer_token(self, post):

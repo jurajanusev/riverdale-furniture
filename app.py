@@ -182,7 +182,7 @@ def create_app(test_config=None):
             return None
         public_endpoint = request.endpoint in {
             "login", "healthcheck", "static", "uploaded_image", "collector_import",
-            "extension_search_plan",
+            "extension_search_plan", "extension_catalog", "extension_add_product",
         }
         public_path = request.path.startswith("/architect/")
         if public_endpoint or public_path:
@@ -300,6 +300,61 @@ def create_app(test_config=None):
                     "item_type": item_type,
                 })
         return jsonify(ok=True, criteria=criteria, stores=stores)
+
+    @app.get("/api/extension/catalog")
+    def extension_catalog():
+        authorization = request.headers.get("Authorization", "")
+        supplied_token = authorization[7:] if authorization.startswith("Bearer ") else ""
+        if not collector_token_valid(supplied_token):
+            return jsonify(error="Platnosť prepojenia vypršala. Otvorte alebo obnovte Riverdale."), 401
+        return jsonify(ok=True, spaces=SPACES, categories=CATEGORIES)
+
+    @app.post("/api/extension/product")
+    def extension_add_product():
+        authorization = request.headers.get("Authorization", "")
+        supplied_token = authorization[7:] if authorization.startswith("Bearer ") else ""
+        if not collector_token_valid(supplied_token):
+            return jsonify(error="Platnosť prepojenia vypršala. Otvorte alebo obnovte Riverdale."), 401
+        payload = request.get_json(silent=True) or {}
+        raw = payload.get("product")
+        assignment = payload.get("assignment") or {}
+        if not isinstance(raw, dict) or not isinstance(assignment, dict):
+            return jsonify(error="Chýbajú údaje produktu alebo cieľový priestor."), 400
+        context = validate_context(assignment)
+        store = str(raw.get("store", "")).strip()
+        product_url = str(raw.get("product_url", "")).strip()
+        scraper_class = next((cls for cls in SCRAPERS if cls.store == store), None)
+        try:
+            valid_url = bool(scraper_class and scraper_class(criteria=context).is_product_url(product_url))
+        except (TypeError, ValueError):
+            valid_url = False
+        if not str(raw.get("name", "")).strip() or not valid_url:
+            return jsonify(error="Stránka nevyzerá ako platný produkt podporovaného obchodu."), 400
+        allowed_fields = set(Product.__dataclass_fields__) - {
+            "id", "internal_id", "created_at", "updated_at", "local_image",
+        }
+        product = {key: raw[key] for key in allowed_fields if key in raw}
+        product.update(context)
+        product.update({
+            "name": str(raw["name"]).strip()[:300],
+            "store": store,
+            "product_url": product_url,
+            "last_checked": date.today().isoformat(),
+            "approval_status": "approved" if payload.get("approved") is True else "unreviewed",
+            "local_image": "",
+            "notes": str(raw.get("notes", "")).strip()[:1000],
+        })
+        product_id = save_product(product)
+        saved = get_product(product_id)
+        return jsonify(
+            ok=True, product_id=product_id,
+            destination=f"{saved.space_name} · {saved.room}",
+            approved=saved.approval_status == "approved",
+            selection_url=url_for(
+                "selection", space_id=saved.space_id, room=saved.room,
+                main_category=saved.main_category, item_type=saved.item_type,
+            ),
+        )
 
     @app.get("/extension/riverdale-collector.zip")
     def download_chrome_extension():

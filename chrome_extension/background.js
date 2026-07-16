@@ -79,6 +79,24 @@ async function uploadProducts(cloudUrl, token, products) {
   return imported;
 }
 
+async function configuredRequest(path, options = {}) {
+  const {riverdaleConfig} = await chrome.storage.local.get('riverdaleConfig');
+  if (!riverdaleConfig?.cloudUrl || !riverdaleConfig?.token) {
+    throw new Error('Najprv otvor alebo obnov cloudovú stránku Riverdale.');
+  }
+  const response = await fetch(`${riverdaleConfig.cloudUrl}${path}`, {
+    ...options,
+    headers: {
+      'Authorization': `Bearer ${riverdaleConfig.token}`,
+      ...(options.body ? {'Content-Type': 'application/json'} : {}),
+      ...(options.headers || {})
+    }
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Riverdale požiadavku odmietol.');
+  return {...result, cloudUrl: riverdaleConfig.cloudUrl};
+}
+
 async function runCollection(message, originTabId) {
   if (activeRun) {
     await notify(originTabId, 'Zber blokovaných obchodov už prebieha.', 'warning');
@@ -134,11 +152,32 @@ async function runCollection(message, originTabId) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type !== 'riverdale-start-collection') return false;
-  const originTabId = sender.tab?.id;
-  if (!originTabId) return false;
-  runCollection(message, originTabId)
-    .then(() => sendResponse({ok: true}))
-    .catch(error => sendResponse({ok: false, error: error.message}));
-  return true;
+  const respond = promise => {
+    promise.then(result => sendResponse({ok: true, ...result}))
+      .catch(error => sendResponse({ok: false, error: error.message}));
+    return true;
+  };
+  if (message?.type === 'riverdale-configure') {
+    return respond(chrome.storage.local.set({
+      riverdaleConfig: {cloudUrl: message.cloudUrl, token: message.token, updatedAt: Date.now()}
+    }).then(() => ({})));
+  }
+  if (message?.type === 'riverdale-get-catalog') {
+    return respond(configuredRequest('/api/extension/catalog'));
+  }
+  if (message?.type === 'riverdale-add-product') {
+    return respond(configuredRequest('/api/extension/product', {
+      method: 'POST', body: JSON.stringify(message.payload)
+    }));
+  }
+  if (message?.type === 'riverdale-start-collection') {
+    const originTabId = sender.tab?.id;
+    if (!originTabId) return false;
+    return respond(
+      chrome.storage.local.set({
+        riverdaleConfig: {cloudUrl: message.cloudUrl, token: message.token, updatedAt: Date.now()}
+      }).then(() => runCollection(message, originTabId)).then(() => ({}))
+    );
+  }
+  return false;
 });
