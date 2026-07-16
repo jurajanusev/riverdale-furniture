@@ -3,6 +3,7 @@ import json
 import os
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -368,7 +369,8 @@ class RiverdaleAppTest(unittest.TestCase):
                 data={"space_id": "dom-betty", "room": "spálňa / izba", "item_type": "posteľ"},
                 follow_redirects=True,
             )
-        self.assertIn(b"http://127.0.0.1:5000/local-verify-all", page.data)
+        self.assertIn(b"data-extension-collect", page.data)
+        self.assertIn(b"/extension/riverdale-collector.zip", page.data)
         self.assertIn("CAPTCHA sa musí overiť na vašom počítači".encode(), response.data)
         popen.assert_not_called()
 
@@ -444,6 +446,37 @@ class RiverdaleAppTest(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["imported"], 1)
+
+    def test_chrome_extension_download_contains_manifest_and_scripts(self):
+        response = self.client.get("/extension/riverdale-collector.zip")
+        self.assertEqual(response.status_code, 200)
+        with zipfile.ZipFile(io.BytesIO(response.data)) as bundle:
+            self.assertEqual(
+                set(bundle.namelist()),
+                {"README.md", "background.js", "content.js", "manifest.json"},
+            )
+            manifest = json.loads(bundle.read("manifest.json"))
+        self.assertEqual(manifest["manifest_version"], 3)
+        self.assertIn("https://www.moebelix.sk/*", manifest["host_permissions"])
+
+    def test_extension_search_plan_uses_store_search_and_german_term(self):
+        token = URLSafeTimedSerializer("test", salt="riverdale-collector").dumps({"purpose": "collector"})
+        response = self.client.post(
+            "/api/extension/search-plan",
+            json={
+                "space_id": "dom-betty", "room": "spálňa / izba",
+                "main_category": "nabytok", "item_type": "toaletný stolík",
+                "search_max_price": "300",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        result = response.get_json()
+        self.assertEqual(len(result["stores"]), 6)
+        self.assertEqual(result["criteria"]["max_price"], 300.0)
+        moebelix_at = next(store for store in result["stores"] if store["store"] == "Möbelix Rakúsko")
+        self.assertEqual(moebelix_at["search_term"], "Schminktisch")
+        self.assertIn("Schminktisch", moebelix_at["url"])
 
     @patch("verify_store.requests.post")
     def test_local_collector_sends_products_with_bearer_token(self, post):

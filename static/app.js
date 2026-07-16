@@ -100,6 +100,13 @@ document.querySelectorAll('[data-local-verify-all]').forEach(link => {
   });
 });
 
+document.querySelectorAll('[data-extension-collect]').forEach(button => {
+  button.addEventListener('click', () => {
+    if (document.documentElement.dataset.riverdaleCollector === 'ready') return;
+    alert('Najprv nainštalujte Riverdale Collector cez tlačidlo „Stiahnuť Chrome doplnok“, potom obnovte túto stránku.');
+  });
+});
+
 const moveModal = document.querySelector('#move-product-modal');
 const moveForm = moveModal?.querySelector('[data-move-product-form]');
 const moveSpace = moveModal?.querySelector('[data-move-space]');

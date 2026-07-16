@@ -71,11 +71,12 @@
       <summary><strong>Ručne overiť blokovaný obchod</strong><span>Pre Möbelix, XXXLutz, Mömax a Sconto</span></summary>
       <div class="captcha-content">
         {% if cloud_runtime %}
-        <p><strong>Zostaň na tejto cloudovej stránke.</strong> Vyplň kritériá vyššie a klikni na obchod. Lokálny zberač otvorí priamo Chrome s CAPTCHA; pomocné okno sa samo zavrie a produkty sa po overení odošlú sem.</p>
+        <p><strong>Zostaň na tejto cloudovej stránke.</strong> Doplnok postupne otvorí vyhľadávanie vo všetkých blokovaných obchodoch. Zastaví sa iba vtedy, keď treba vyriešiť CAPTCHA, a nájdené produkty odošle priamo sem.</p>
         <div class="captcha-actions">
-          <a class="button outline" data-local-verify-all data-collector-token="{{ collector_token }}" data-collector-cloud-url="https://riverdale-furniture.onrender.com" target="_blank" rel="noopener" href="http://127.0.0.1:5000/local-verify-all">Overiť všetky blokované obchody</a>
+          <button class="button outline" type="button" data-extension-collect data-collector-token="{{ collector_token }}" data-cloud-url="https://riverdale-furniture.onrender.com">Automaticky zozbierať blokované obchody</button>
+          <a class="button outline" href="{{ url_for('download_chrome_extension') }}">Stiahnuť Chrome doplnok</a>
         </div>
-        <small>Lokálny zberač musí bežať na pozadí. Ak tlačidlo nereaguje, spusti raz <code>start_collector.ps1</code>.</small>
+        <small>Doplnok sa inštaluje iba raz cez <code>chrome://extensions</code> → Režim pre vývojárov → Načítať rozbalené. Lokálny server netreba.</small>
         {% else %}
         <p>Otvorí sa samostatné okno prehliadača. Vyrieš CAPTCHA a okno nechaj otvorené. Aplikácia v tej istej relácii uloží katalóg aj produktové stránky a po dokončení okno zavrie automaticky. Potom spusti vyhľadávanie.</p>
         <div class="captcha-actions">

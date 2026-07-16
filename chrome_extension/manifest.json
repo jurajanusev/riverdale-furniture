@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Riverdale Collector",
+  "version": "1.0.0",
+  "description": "Zozbiera výsledky z blokovaných obchodov a odošle ich do Riverdale.",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": [
+    "https://riverdale-furniture.onrender.com/*",
+    "https://www.moebelix.sk/*",
+    "https://www.moebelix.at/*",
+    "https://www.xxxlutz.sk/*",
+    "https://www.xxxlutz.at/*",
+    "https://www.moemax.at/*",
+    "https://www.sconto.sk/*"
+  ],
+  "background": {"service_worker": "background.js"},
+  "content_scripts": [
+    {
+      "matches": [
+        "https://riverdale-furniture.onrender.com/*",
+        "https://www.moebelix.sk/*",
+        "https://www.moebelix.at/*",
+        "https://www.xxxlutz.sk/*",
+        "https://www.xxxlutz.at/*",
+        "https://www.moemax.at/*",
+        "https://www.sconto.sk/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

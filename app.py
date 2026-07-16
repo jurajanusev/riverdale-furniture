@@ -6,10 +6,11 @@ import re
 import secrets
 import subprocess
 import sys
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
 from openpyxl import Workbook
@@ -109,12 +110,24 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
     collector_signer = URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="riverdale-collector")
+
+    def collector_token_valid(supplied_token):
+        expected_token = os.environ.get("RIVERDALE_SYNC_TOKEN") or os.environ.get("RIVERDALE_ADMIN_PASSWORD", "")
+        if expected_token and supplied_token and secrets.compare_digest(supplied_token, expected_token):
+            return True
+        if not supplied_token:
+            return False
+        try:
+            return collector_signer.loads(supplied_token, max_age=7200).get("purpose") == "collector"
+        except (BadSignature, SignatureExpired, AttributeError):
+            return False
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     SEARCH_JOB_DIR.mkdir(parents=True, exist_ok=True)
     init_db()
 
-    if not app.config.get("TESTING"):
+    if not app.config.get("TESTING") and (os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_ID")):
+        pending_paths = []
         for pending_path in SEARCH_JOB_DIR.glob("*.json"):
             try:
                 pending = json.loads(pending_path.read_text(encoding="utf-8"))
@@ -122,13 +135,16 @@ def create_app(test_config=None):
                 continue
             if pending.get("state") not in {"queued", "running"}:
                 continue
+            pending_paths.append((pending_path.stat().st_mtime, pending_path, pending))
+        pending_paths.sort(reverse=True, key=lambda item: item[0])
+        for position, (_, pending_path, pending) in enumerate(pending_paths):
             criteria = pending.get("criteria")
-            if isinstance(criteria, dict):
+            if position == 0 and isinstance(criteria, dict):
                 pending["state"] = "queued"
                 pending_path.write_text(json.dumps(pending, ensure_ascii=False), encoding="utf-8")
                 SEARCH_EXECUTOR.submit(run_search, criteria, pending_path)
             else:
-                pending.update(state="error", error="Stará úloha bola prerušená. Spustite vyhľadávanie znova.")
+                pending.update(state="error", error="Úloha bola prerušená reštartom. Spustite vyhľadávanie znova.")
                 pending_path.write_text(json.dumps(pending, ensure_ascii=False), encoding="utf-8")
 
     def is_cloud_runtime():
@@ -164,7 +180,10 @@ def create_app(test_config=None):
         password = os.environ.get("RIVERDALE_ADMIN_PASSWORD", "")
         if not password or session.get("riverdale_admin"):
             return None
-        public_endpoint = request.endpoint in {"login", "healthcheck", "static", "uploaded_image", "collector_import"}
+        public_endpoint = request.endpoint in {
+            "login", "healthcheck", "static", "uploaded_image", "collector_import",
+            "extension_search_plan",
+        }
         public_path = request.path.startswith("/architect/")
         if public_endpoint or public_path:
             return None
@@ -207,17 +226,9 @@ def create_app(test_config=None):
 
     @app.post("/api/collector/products")
     def collector_import():
-        expected_token = os.environ.get("RIVERDALE_SYNC_TOKEN") or os.environ.get("RIVERDALE_ADMIN_PASSWORD", "")
         authorization = request.headers.get("Authorization", "")
         supplied_token = authorization[7:] if authorization.startswith("Bearer ") else ""
-        static_valid = bool(expected_token and supplied_token and secrets.compare_digest(supplied_token, expected_token))
-        signed_valid = False
-        if supplied_token and not static_valid:
-            try:
-                signed_valid = collector_signer.loads(supplied_token, max_age=7200).get("purpose") == "collector"
-            except (BadSignature, SignatureExpired, AttributeError):
-                signed_valid = False
-        if not static_valid and not signed_valid:
+        if not collector_token_valid(supplied_token):
             return jsonify(error="Neplatný synchronizačný kľúč."), 401
         payload = request.get_json(silent=True) or {}
         raw_products = payload.get("products")
@@ -258,6 +269,51 @@ def create_app(test_config=None):
             save_product(product)
             imported += 1
         return jsonify(ok=True, imported=imported, rejected=rejected), 200 if imported else 400
+
+    @app.post("/api/extension/search-plan")
+    def extension_search_plan():
+        authorization = request.headers.get("Authorization", "")
+        supplied_token = authorization[7:] if authorization.startswith("Bearer ") else ""
+        if not collector_token_valid(supplied_token):
+            return jsonify(error="Platnosť prepojenia vypršala. Obnovte stránku Riverdale."), 401
+        values = request.get_json(silent=True) or {}
+        try:
+            criteria = search_criteria(values)
+        except ValueError as exc:
+            return jsonify(error=str(exc)), 400
+        stores = []
+        for store_name in CAPTCHA_STORES.values():
+            scraper_class = next((cls for cls in SCRAPERS if cls.store == store_name), None)
+            if not scraper_class:
+                continue
+            scraper = scraper_class(criteria=criteria)
+            item_type = criteria["item_type"]
+            search_term = scraper.german_terms.get(item_type, item_type) if scraper.search_language == "de" else item_type
+            if scraper.search_url_template:
+                target_url = scraper.search_url_template.format(query=quote_plus(search_term))
+            else:
+                target_url = scraper.catalog_url_for_search()
+            if target_url:
+                stores.append({
+                    "store": scraper.store, "country": scraper.country,
+                    "url": target_url, "search_term": search_term,
+                    "item_type": item_type,
+                })
+        return jsonify(ok=True, criteria=criteria, stores=stores)
+
+    @app.get("/extension/riverdale-collector.zip")
+    def download_chrome_extension():
+        extension_dir = BASE_DIR / "chrome_extension"
+        archive = io.BytesIO()
+        with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
+            for path in sorted(extension_dir.iterdir()):
+                if path.is_file():
+                    bundle.write(path, path.name)
+        archive.seek(0)
+        return send_file(
+            archive, mimetype="application/zip", as_attachment=True,
+            download_name="riverdale-collector.zip",
+        )
 
     @app.get("/")
     def index():
