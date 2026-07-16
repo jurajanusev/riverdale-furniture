@@ -119,7 +119,7 @@
           <button class="delete-product" type="button" data-delete-product>Vymazať produkt</button>
         </div>
       </article>{% endfor %}
-    </section>{% else %}<section class="empty panel"><div class="empty-icon">⌂</div><h2>Zatiaľ tu nie sú žiadne výsledky</h2><p>Spustite vyhľadávanie pre {{ context.item_type }} alebo pridajte produkt manuálne.</p><button class="button primary" data-open-modal>Pridať prvý produkt</button></section>{% endif %}
+    </section>{% else %}<section class="empty panel"><div class="empty-icon">⌂</div>{% if search_job and search_job.state in ('queued', 'running') %}<h2>Vyhľadávanie stále prebieha</h2><p>Obchody sa kontrolujú na pozadí. Výsledky sa zobrazia automaticky po dokončení.</p>{% else %}<h2>Zatiaľ tu nie sú žiadne výsledky</h2><p>Spustite vyhľadávanie pre {{ context.item_type }} alebo pridajte produkt manuálne.</p><button class="button primary" data-open-modal>Pridať prvý produkt</button>{% endif %}</section>{% endif %}
   </main>
 
   <dialog id="spaces-modal" class="spaces-modal">

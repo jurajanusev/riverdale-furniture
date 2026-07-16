@@ -13,6 +13,8 @@ services:
         value: 3.12.8
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: "0"
+      - key: RIVERDALE_SCRAPER_WORKERS
+        value: "2"
       - key: RIVERDALE_SECRET
         generateValue: true
       - key: RIVERDALE_ADMIN_PASSWORD

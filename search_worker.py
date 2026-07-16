@@ -19,7 +19,7 @@ def write_status(path, **status):
 def run_search(criteria, status_path):
     status_path = Path(status_path).resolve()
     status_path.parent.mkdir(parents=True, exist_ok=True)
-    write_status(status_path, state="running", messages=[])
+    write_status(status_path, state="running", messages=[], criteria=criteria)
     try:
         products, messages = search_all(criteria)
         for product in products:

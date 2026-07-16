@@ -34,7 +34,7 @@ DATA_DIR = Path(os.environ.get("RIVERDALE_DATA_DIR", BASE_DIR / "data"))
 UPLOAD_DIR = Path(os.environ.get("RIVERDALE_UPLOAD_DIR", BASE_DIR / "static" / "uploads"))
 EXPORT_DIR = Path(os.environ.get("RIVERDALE_EXPORT_DIR", BASE_DIR / "exports"))
 SEARCH_JOB_DIR = DATA_DIR / "search_jobs"
-SEARCH_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="riverdale-search")
+SEARCH_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="riverdale-search")
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_STORES = [
     "IKEA Slovensko", "IKEA Rakúsko", "Möbelix Slovensko", "Möbelix Rakúsko",
@@ -113,6 +113,23 @@ def create_app(test_config=None):
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     SEARCH_JOB_DIR.mkdir(parents=True, exist_ok=True)
     init_db()
+
+    if not app.config.get("TESTING"):
+        for pending_path in SEARCH_JOB_DIR.glob("*.json"):
+            try:
+                pending = json.loads(pending_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if pending.get("state") not in {"queued", "running"}:
+                continue
+            criteria = pending.get("criteria")
+            if isinstance(criteria, dict):
+                pending["state"] = "queued"
+                pending_path.write_text(json.dumps(pending, ensure_ascii=False), encoding="utf-8")
+                SEARCH_EXECUTOR.submit(run_search, criteria, pending_path)
+            else:
+                pending.update(state="error", error="Stará úloha bola prerušená. Spustite vyhľadávanie znova.")
+                pending_path.write_text(json.dumps(pending, ensure_ascii=False), encoding="utf-8")
 
     def is_cloud_runtime():
         return bool(os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_ID"))
@@ -448,7 +465,7 @@ def create_app(test_config=None):
         job_id = secrets.token_urlsafe(16)
         job_path = SEARCH_JOB_DIR / f"{job_id}.json"
         job_path.write_text(
-            json.dumps({"state": "queued", "messages": [], "imported": 0}, ensure_ascii=False),
+            json.dumps({"state": "queued", "messages": [], "imported": 0, "criteria": criteria}, ensure_ascii=False),
             encoding="utf-8",
         )
         try:

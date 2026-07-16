@@ -1,3 +1,4 @@
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 from .ikea_sk import IkeaSlovakiaScraper
@@ -53,7 +54,11 @@ def search_all(criteria=None):
             return [], f"{scraper.store}: nepodarilo sa načítať ({scraper_error_message(exc)})"
 
     products, messages = [], []
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    try:
+        worker_count = max(1, min(5, int(os.environ.get("RIVERDALE_SCRAPER_WORKERS", "3"))))
+    except ValueError:
+        worker_count = 3
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
         for found, message in executor.map(run, SCRAPERS):
             products.extend(found)
             messages.append(message)
