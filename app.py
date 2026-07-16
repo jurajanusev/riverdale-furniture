@@ -390,25 +390,13 @@ def create_app(test_config=None):
             "approval_status": "approved",
         }))
         options = {key: distinct_values(key) for key in ("store", "country", "color", "material", "availability")}
-        search_job_id = request.args.get("search_job", "")
-        search_job = read_search_job(search_job_id) if search_job_id else None
-        captcha_statuses = {}
-        for key, store in CAPTCHA_STORES.items():
-            status_path = browser_profile_dir(store) / "riverdale-status.json"
-            try:
-                captcha_statuses[key] = json.loads(status_path.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                captcha_statuses[key] = {}
         return render_template(
             "index.html", products=products, filters=filters, context=context, sort=sort,
             options=options, stores=ALLOWED_STORES, status_labels=STATUS_LABELS,
             spaces=SPACES, categories=CATEGORIES, space_by_id=SPACE_BY_ID,
             category_by_id=CATEGORY_BY_ID, selection_count=selection_count,
-            captcha_stores=CAPTCHA_STORES, captcha_statuses=captcha_statuses,
             cloud_runtime=is_cloud_runtime(),
-            search_values=search_form_values(request.args),
             collector_token=collector_signer.dumps({"purpose": "collector"}) if is_cloud_runtime() else "",
-            search_job_id=search_job_id, search_job=search_job,
         )
 
     @app.get("/selection")

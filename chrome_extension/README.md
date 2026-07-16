@@ -7,13 +7,12 @@ Jednorazová inštalácia:
 3. Zapnite **Režim pre vývojárov**.
 4. Kliknite na **Načítať rozbalené** a vyberte rozbalený priečinok.
 
-Potom stačí v Riverdale vyplniť vyhľadávanie a kliknúť na tlačidlo automatického
-zberu blokovaných obchodov. Ak obchod zobrazí CAPTCHA, vyriešte ju v otvorenej
-karte; doplnok bude následne pokračovať automaticky.
+Potom otvorte konkrétny produkt alebo bazárový inzerát a kliknite na ikonu **R**
+vpravo hore. Vyberte projekt, miestnosť, kategóriu a typ; produkt možno zároveň
+rovno schváliť do výberu miestnosti.
 
-Na podporovanej produktovej stránke sa vľavo dole zobrazí tlačidlo
-**Pridať do Riverdale**. Po kliknutí vyberte projekt, miestnosť, kategóriu a typ.
-Produkt možno zároveň rovno schváliť do výberu miestnosti.
+Na podporovaných produktových stránkach sa navyše vľavo dole zobrazí tlačidlo
+**Pridať do Riverdale**.
 
 Ak plávajúce tlačidlo Chrome na niektorej stránke nezobrazí, kliknite priamo na
 ikonu **R** doplnku vpravo hore. Dialóg na pridanie aktuálneho produktu sa otvorí

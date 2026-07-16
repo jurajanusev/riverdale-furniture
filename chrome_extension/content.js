@@ -307,30 +307,14 @@ function progressToast(message, kind = 'info') {
 
 if (location.hostname === 'riverdale-furniture.onrender.com') {
   document.documentElement.dataset.riverdaleCollector = 'ready';
-  const collectorButton = document.querySelector('[data-extension-collect]');
-  if (collectorButton) {
+  const extensionConfig = document.querySelector('[data-riverdale-extension-config]');
+  if (extensionConfig) {
     chrome.runtime.sendMessage({
       type: 'riverdale-configure',
-      cloudUrl: collectorButton.dataset.cloudUrl,
-      token: collectorButton.dataset.collectorToken
+      cloudUrl: extensionConfig.dataset.cloudUrl,
+      token: extensionConfig.dataset.collectorToken
     });
   }
-  document.addEventListener('click', event => {
-    const button = event.target.closest('[data-extension-collect]');
-    if (!button) return;
-    event.preventDefault();
-    const form = document.querySelector('.search-form');
-    if (!form) return;
-    button.disabled = true;
-    progressToast('Pripravujem automatický zber blokovaných obchodov…');
-    chrome.runtime.sendMessage({
-      type: 'riverdale-start-collection',
-      cloudUrl: button.dataset.cloudUrl,
-      token: button.dataset.collectorToken,
-      formValues: Object.fromEntries(new FormData(form).entries())
-    }).catch(error => progressToast(error.message || 'Doplnok sa nepodarilo spustiť.', 'error'))
-      .finally(() => { button.disabled = false; });
-  });
 } else {
   addManualProductButton();
   setTimeout(addManualProductButton, 2500);

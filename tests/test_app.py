@@ -53,11 +53,12 @@ class RiverdaleAppTest(unittest.TestCase):
     def test_empty_index_and_manual_add(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Zatiaľ tu nie sú žiadne výsledky".encode(), response.data)
+        self.assertIn("Zatiaľ tu nie sú žiadne produkty".encode(), response.data)
         self.assertIn("Priestory a miestnosti".encode(), response.data)
         self.assertIn("Dom Archie".encode(), response.data)
-        self.assertIn("Ručne overiť blokovaný obchod".encode(), response.data)
-        self.assertIn("Max. hĺbka".encode(), response.data)
+        self.assertIn("Nájdite produkt a kliknite na R".encode(), response.data)
+        self.assertNotIn("Vyhľadať produkty".encode(), response.data)
+        self.assertNotIn("CAPTCHA".encode(), response.data)
         response = self.add_product()
         self.assertEqual(response.status_code, 200)
         self.assertIn("RIV-ITEM-0001", response.get_data(as_text=True))
@@ -308,14 +309,15 @@ class RiverdaleAppTest(unittest.TestCase):
         scraper = JyskSlovakiaScraper(criteria={"item_type": "koberec"})
         self.assertTrue(scraper.is_product_url("https://jysk.sk/domacnost/koberce/male-koberce/koberec-tysbast-60x90-rozne"))
 
-    @patch("app.SEARCH_EXECUTOR.submit")
-    def test_search_runs_in_background_without_blocking_request(self, submit):
-        response = self.client.post("/search", follow_redirects=True)
+    def test_index_is_extension_first_product_manager(self):
+        response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Vyhľadávanie prebieha na pozadí".encode(), response.data)
-        submit.assert_called_once()
-        self.assertEqual(submit.call_args.args[0].__name__, "run_search")
-        self.assertEqual(database.list_products(), [])
+        self.assertIn("Nájdite produkt a kliknite na R".encode(), response.data)
+        self.assertIn(b"data-riverdale-extension-config", response.data)
+        self.assertIn(b"/extension/riverdale-collector.zip", response.data)
+        self.assertNotIn(b'class="search-form', response.data)
+        self.assertNotIn(b"data-extension-collect", response.data)
+        self.assertNotIn("CAPTCHA".encode(), response.data)
 
     @patch("app.SEARCH_EXECUTOR.submit")
     def test_search_passes_riverdale_context_and_generic_criteria(self, submit):
@@ -336,43 +338,6 @@ class RiverdaleAppTest(unittest.TestCase):
         self.assertTrue(criteria["in_stock"])
         self.assertEqual(criteria["min_width"], 120.0)
         self.assertEqual(criteria["max_depth"], 100.0)
-
-    @patch("app.subprocess.Popen")
-    def test_manual_captcha_verification_starts_persistent_browser_helper(self, popen):
-        response = self.client.post("/verify-store/moebelix-sk", data={
-            "space_id": "dom-betty", "room": "spálňa / izba",
-            "main_category": "nabytok", "item_type": "komoda",
-            "search_max_price": "350", "search_color": "hnedá",
-            "search_in_stock": "yes", "search_min_width": "80",
-        }, follow_redirects=True)
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Otvorilo sa ručné overenie".encode(), response.data)
-        popen.assert_called_once()
-        self.assertIn("verify_store.py", popen.call_args.args[0][1])
-        self.assertEqual(popen.call_args.args[0][-2], "komoda")
-        helper_context = json.loads(popen.call_args.args[0][-1])
-        self.assertEqual(helper_context["space_id"], "dom-betty")
-        self.assertEqual(helper_context["item_type"], "komoda")
-        self.assertEqual(helper_context["max_price"], 350.0)
-        self.assertEqual(helper_context["color"], "hnedá")
-        self.assertTrue(helper_context["in_stock"])
-        self.assertEqual(helper_context["min_width"], 80.0)
-        self.assertIn(b'name="search_max_price"', response.data)
-        self.assertIn(b'value="350"', response.data)
-
-    @patch("app.subprocess.Popen")
-    def test_cloud_captcha_uses_local_collector_instead_of_server_browser(self, popen):
-        with patch.dict(os.environ, {"RENDER": "true"}):
-            page = self.client.get("/")
-            response = self.client.post(
-                "/verify-store/moebelix-sk",
-                data={"space_id": "dom-betty", "room": "spálňa / izba", "item_type": "posteľ"},
-                follow_redirects=True,
-            )
-        self.assertIn(b"data-extension-collect", page.data)
-        self.assertIn(b"/extension/riverdale-collector.zip", page.data)
-        self.assertIn("CAPTCHA sa musí overiť na vašom počítači".encode(), response.data)
-        popen.assert_not_called()
 
     @patch("app.subprocess.Popen")
     def test_cloud_button_can_start_local_verification_without_switching_apps(self, popen):

@@ -5,34 +5,6 @@ const spacesModal = document.querySelector('#spaces-modal');
 document.querySelectorAll('[data-open-spaces]').forEach(button => button.addEventListener('click', () => spacesModal.showModal()));
 spacesModal?.addEventListener('click', event => { if (event.target === spacesModal) spacesModal.close(); });
 
-const searchJob = document.querySelector('[data-search-job]');
-if (searchJob && ['queued', 'running'].includes(searchJob.dataset.searchState)) {
-  const pollSearch = async () => {
-    try {
-      const response = await fetch(`/api/search-jobs/${searchJob.dataset.searchJob}`);
-      if (!response.ok) return;
-      const status = await response.json();
-      const progress = searchJob.querySelector('[data-search-progress]');
-      if (progress && status.state === 'running') {
-        const completed = Number(status.completed_stores || 0);
-        const total = Number(status.total_stores || 0);
-        progress.textContent = total
-          ? `Skontrolované obchody: ${completed}/${total}. Nájdené produkty: ${Number(status.imported || 0)}.`
-          : 'Vyhľadávanie prebieha na pozadí – spúšťa sa…';
-      }
-      if (status.state === 'complete' || status.state === 'error') window.location.reload();
-    } catch { }
-  };
-  setInterval(pollSearch, 3000);
-  pollSearch();
-}
-
-document.querySelector('.search-form')?.addEventListener('submit', event => {
-  const button = event.currentTarget.querySelector('.search-submit');
-  button.disabled = true;
-  button.textContent = 'Spúšťam vyhľadávanie…';
-});
-
 const fillSelect = (select, values, preferred) => {
   select.replaceChildren(...values.map(value => {
     const option = document.createElement('option');
@@ -69,42 +41,6 @@ document.querySelectorAll('.context-form').forEach(form => {
   updateRooms();
   updateTypes();
   updateCriteria();
-});
-
-const searchForm = document.querySelector('.search-form');
-const copySearchCriteria = target => {
-  if (!searchForm) return;
-  for (const field of searchForm.elements) {
-    if (!field.name || field.type === 'submit') continue;
-    let copy = target.elements.namedItem(field.name);
-    if (!copy) {
-      copy = document.createElement('input');
-      copy.type = 'hidden';
-      copy.name = field.name;
-      target.append(copy);
-    }
-    copy.value = field.value;
-  }
-};
-
-document.querySelectorAll('.captcha-store-form').forEach(form => {
-  form.addEventListener('submit', () => copySearchCriteria(form));
-});
-
-document.querySelectorAll('[data-local-verify-all]').forEach(link => {
-  link.addEventListener('click', () => {
-    const params = new URLSearchParams(new FormData(searchForm));
-    params.set('collector_token', link.dataset.collectorToken);
-    params.set('collector_cloud_url', link.dataset.collectorCloudUrl);
-    link.href = `http://127.0.0.1:5000/local-verify-all?${params}`;
-  });
-});
-
-document.querySelectorAll('[data-extension-collect]').forEach(button => {
-  button.addEventListener('click', () => {
-    if (document.documentElement.dataset.riverdaleCollector === 'ready') return;
-    alert('Najprv nainštalujte Riverdale Collector cez tlačidlo „Stiahnuť Chrome doplnok“, potom obnovte túto stránku.');
-  });
 });
 
 const moveModal = document.querySelector('#move-product-modal');

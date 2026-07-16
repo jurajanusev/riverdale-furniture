@@ -7,15 +7,11 @@
 .move-product:hover { background: #e7eee7; }
 .move-product-modal { width: min(680px, 94vw); }
 .move-error { min-height: 1.2em; color: #9c4a42; }
-.captcha-panel { margin: 0 0 18px; }
-.captcha-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.2rem; cursor: pointer; color: #304b3d; }
-.captcha-panel summary span { color: #747c74; font-size: .8rem; font-weight: 400; }
-.captcha-content { padding: 0 1.2rem 1.2rem; border-top: 1px solid #dedbd2; }
-.captcha-content p { max-width: 65rem; color: #6d786f; font-size: .86rem; line-height: 1.5; }
-.captcha-actions { display: flex; flex-wrap: wrap; gap: .55rem; }
-.captcha-actions form { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; margin: 0; }
-.captcha-actions .button { padding: .65rem .8rem; font-size: .76rem; }
-.captcha-actions small { color: #6d786f; font-size: .68rem; }
+.import-panel { display: flex; align-items: center; justify-content: space-between; gap: 2rem; margin: 0 0 18px; padding: 1.4rem; border-top: 4px solid #c99c4f; }
+.import-panel h2 { margin: 0; font: 1.75rem Georgia, serif; }
+.import-panel p:last-child { max-width: 48rem; margin: .45rem 0 0; color: #6d786f; line-height: 1.5; }
+.import-actions { display: flex; gap: .6rem; flex: 0 0 auto; }
+@media (max-width: 700px) { .import-panel { display: block; } .import-actions { margin-top: 1rem; flex-wrap: wrap; } }
 .selection-main { padding-bottom: 5rem; }
 .selection-summary { display: flex; align-items: center; justify-content: space-between; gap: 2rem; border-top: 5px solid #c99c4f; }
 .selection-summary h2 { margin: .2rem 0 .6rem; }
