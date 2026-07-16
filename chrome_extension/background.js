@@ -1,5 +1,54 @@
 const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 
+const SHOP_TABS = [
+  {key: 'ikea-sk', url: 'https://www.ikea.com/sk/sk/', matches: url => url.hostname.includes('ikea.com') && url.pathname.startsWith('/sk/sk/')},
+  {key: 'ikea-at', url: 'https://www.ikea.com/at/de/', matches: url => url.hostname.includes('ikea.com') && url.pathname.startsWith('/at/de/')},
+  {key: 'jysk-sk', url: 'https://jysk.sk/', matches: url => url.hostname === 'jysk.sk'},
+  {key: 'jysk-at', url: 'https://jysk.at/', matches: url => url.hostname === 'jysk.at'},
+  {key: 'moebelix-sk', url: 'https://www.moebelix.sk/', matches: url => url.hostname.endsWith('moebelix.sk')},
+  {key: 'moebelix-at', url: 'https://www.moebelix.at/', matches: url => url.hostname.endsWith('moebelix.at')},
+  {key: 'xxxlutz-sk', url: 'https://www.xxxlutz.sk/', matches: url => url.hostname.endsWith('xxxlutz.sk')},
+  {key: 'xxxlutz-at', url: 'https://www.xxxlutz.at/', matches: url => url.hostname.endsWith('xxxlutz.at')},
+  {key: 'moemax-at', url: 'https://www.moemax.at/', matches: url => url.hostname.endsWith('moemax.at')},
+  {key: 'sconto-sk', url: 'https://www.sconto.sk/', matches: url => url.hostname.endsWith('sconto.sk')},
+  {key: 'bonami-sk', url: 'https://www.bonami.sk/', matches: url => url.hostname.endsWith('bonami.sk')},
+  {key: 'asko-sk', url: 'https://www.asko-nabytok.sk/', matches: url => url.hostname.endsWith('asko-nabytok.sk')},
+  {key: 'favi-sk', url: 'https://favi.sk/', matches: url => url.hostname === 'favi.sk' || url.hostname.endsWith('.favi.sk')}
+];
+
+function parsedUrl(value) {
+  try { return new URL(value); } catch { return null; }
+}
+
+async function groupShopTabs({openMissing = false} = {}) {
+  const focused = await chrome.windows.getLastFocused();
+  let tabs = await chrome.tabs.query({windowId: focused.id});
+  const tabIds = [];
+  for (const shop of SHOP_TABS) {
+    let tab = tabs.find(candidate => {
+      const url = parsedUrl(candidate.url);
+      return url && shop.matches(url);
+    });
+    if (!tab && openMissing) {
+      tab = await chrome.tabs.create({windowId: focused.id, url: shop.url, active: false});
+      tabs.push(tab);
+    }
+    if (tab?.id) tabIds.push(tab.id);
+  }
+  if (!tabIds.length) return;
+  const groups = await chrome.tabGroups.query({windowId: focused.id, title: 'Riverdale obchody'});
+  const groupId = await chrome.tabs.group({tabIds, ...(groups[0] ? {groupId: groups[0].id} : {})});
+  await chrome.tabGroups.update(groupId, {title: 'Riverdale obchody', color: 'green', collapsed: true});
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  groupShopTabs({openMissing: true}).catch(() => {});
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  groupShopTabs().catch(() => {});
+});
+
 let activeRun = false;
 
 async function notify(tabId, message, kind = 'info') {
