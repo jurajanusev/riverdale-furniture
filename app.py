@@ -6,6 +6,7 @@ import re
 import secrets
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlparse
@@ -25,6 +26,7 @@ from riverdale_catalog import CATEGORIES, CATEGORY_BY_ID, DEFAULT_CONTEXT, SPACE
 from scrapers import SCRAPERS, search_all
 from scrapers.base import browser_profile_dir
 from models import Product
+from search_worker import run_search
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -32,6 +34,7 @@ DATA_DIR = Path(os.environ.get("RIVERDALE_DATA_DIR", BASE_DIR / "data"))
 UPLOAD_DIR = Path(os.environ.get("RIVERDALE_UPLOAD_DIR", BASE_DIR / "static" / "uploads"))
 EXPORT_DIR = Path(os.environ.get("RIVERDALE_EXPORT_DIR", BASE_DIR / "exports"))
 SEARCH_JOB_DIR = DATA_DIR / "search_jobs"
+SEARCH_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="riverdale-search")
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_STORES = [
     "IKEA Slovensko", "IKEA Rakúsko", "Möbelix Slovensko", "Möbelix Rakúsko",
@@ -449,12 +452,8 @@ def create_app(test_config=None):
             encoding="utf-8",
         )
         try:
-            subprocess.Popen(
-                [sys.executable, str(BASE_DIR / "search_worker.py"), json.dumps(criteria, ensure_ascii=False), str(job_path)],
-                cwd=BASE_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            )
-        except OSError as exc:
+            SEARCH_EXECUTOR.submit(run_search, criteria, job_path)
+        except RuntimeError as exc:
             job_path.write_text(
                 json.dumps({"state": "error", "messages": [], "imported": 0, "error": str(exc)}, ensure_ascii=False),
                 encoding="utf-8",

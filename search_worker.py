@@ -16,11 +16,8 @@ def write_status(path, **status):
     temporary.replace(path)
 
 
-def main():
-    if len(sys.argv) != 3:
-        raise SystemExit("Použitie: search_worker.py KRITERIA_JSON STATUS_SUBOR")
-    criteria = json.loads(sys.argv[1])
-    status_path = Path(sys.argv[2]).resolve()
+def run_search(criteria, status_path):
+    status_path = Path(status_path).resolve()
     status_path.parent.mkdir(parents=True, exist_ok=True)
     write_status(status_path, state="running", messages=[])
     try:
@@ -36,6 +33,12 @@ def main():
             status_path, state="error", messages=[], imported=0,
             error=(" ".join(str(exc).split())[:300] or "Neznáma chyba"),
         )
+
+
+def main():
+    if len(sys.argv) != 3:
+        raise SystemExit("Použitie: search_worker.py KRITERIA_JSON STATUS_SUBOR")
+    run_search(json.loads(sys.argv[1]), sys.argv[2])
 
 
 if __name__ == "__main__":
