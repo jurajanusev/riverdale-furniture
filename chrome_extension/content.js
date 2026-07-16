@@ -115,7 +115,7 @@ function storeForPage() {
   if (host.includes('bonami.sk')) return ['Bonami Slovensko', 'Slovensko'];
   if (host.includes('asko-nabytok.sk')) return ['ASKO Slovensko', 'Slovensko'];
   if (host === 'favi.sk' || host.endsWith('.favi.sk')) return ['FAVI Slovensko', 'Slovensko'];
-  return null;
+  return [host.replace(/^www\./, ''), 'Iný zdroj'];
 }
 
 function isLikelyProductPage() {
@@ -124,6 +124,7 @@ function isLikelyProductPage() {
   if (location.hostname.includes('asko-nabytok.sk') && /\/\d+(?:\.\d+)?-[^/]+\/?$/.test(path)) return true;
   const explicitPrice = document.querySelector('meta[property="product:price:amount"], meta[itemprop="price"], [itemprop="price"][content]');
   if (document.querySelector('h1') && explicitPrice) return true;
+  if (document.querySelector('h1') && priceFrom(document.body?.innerText || '')) return true;
   return location.hostname.startsWith('jysk.') && jsonLdProducts().some(product => product.name);
 }
 

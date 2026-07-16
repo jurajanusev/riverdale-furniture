@@ -515,6 +515,31 @@ class RiverdaleAppTest(unittest.TestCase):
         self.assertEqual(len(products), 1)
         self.assertEqual(products[0].name, "MALM toaletný stolík")
 
+    def test_extension_can_add_product_from_other_marketplace(self):
+        token = URLSafeTimedSerializer("test", salt="riverdale-collector").dumps({"purpose": "collector"})
+        response = self.client.post(
+            "/api/extension/product",
+            json={
+                "product": {
+                    "name": "Vintage toaletný stolík",
+                    "store": "bazar.example", "country": "Iný zdroj",
+                    "product_url": "https://bazar.example/inzerat/vintage-stolik-123",
+                    "image_url": "https://bazar.example/images/123.jpg",
+                    "frame_price": 85.0, "sale_price": 85.0, "currency": "EUR",
+                },
+                "assignment": {
+                    "space_id": "dom-betty", "room": "spálňa / izba",
+                    "main_category": "nabytok", "item_type": "toaletný stolík",
+                },
+                "approved": True,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        product = database.get_product(response.get_json()["product_id"])
+        self.assertEqual(product.store, "bazar.example")
+        self.assertEqual(product.country, "Iný zdroj")
+
     @patch("verify_store.requests.post")
     def test_local_collector_sends_products_with_bearer_token(self, post):
         from verify_store import sync_to_cloud

@@ -19,5 +19,9 @@ Ak plávajúce tlačidlo Chrome na niektorej stránke nezobrazí, kliknite priam
 ikonu **R** doplnku vpravo hore. Dialóg na pridanie aktuálneho produktu sa otvorí
 aj bez osobitného povolenia trvalého prístupu k stránke.
 
+Ikonu **R** možno použiť aj na konkrétnej ponuke z bazára alebo iného e-shopu.
+Doplnok prevezme dostupný názov, cenu, obrázok a odkaz; pred uložením ich možno
+zaradiť do ľubovoľného projektu, miestnosti, kategórie a typu.
+
 Pri inštalácii alebo aktualizácii doplnok otvorí chýbajúce podporované obchody
 a všetkých 13 kariet vloží do jednej zbalenej skupiny **Riverdale obchody**.

@@ -133,17 +133,32 @@ async function configuredRequest(path, options = {}) {
   if (!riverdaleConfig?.cloudUrl || !riverdaleConfig?.token) {
     throw new Error('Najprv otvor alebo obnov cloudovú stránku Riverdale.');
   }
-  const response = await fetch(`${riverdaleConfig.cloudUrl}${path}`, {
-    ...options,
-    headers: {
-      'Authorization': `Bearer ${riverdaleConfig.token}`,
-      ...(options.body ? {'Content-Type': 'application/json'} : {}),
-      ...(options.headers || {})
+  const cloudUrl = riverdaleConfig.cloudUrl.replace(/\/+$/, '');
+  let response;
+  let result;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    response = await fetch(`${cloudUrl}${path}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${riverdaleConfig.token}`,
+        ...(options.body ? {'Content-Type': 'application/json'} : {}),
+        ...(options.headers || {})
+      }
+    });
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      result = await response.json();
+      break;
     }
-  });
-  const result = await response.json();
+    if (attempt === 0 && [502, 503, 504].includes(response.status)) {
+      await wait(1200);
+      continue;
+    }
+    throw new Error('Cloud Riverdale je dočasne nedostupný. Počkajte chvíľu a skúste to znova.');
+  }
+  if (!result) throw new Error('Cloud Riverdale nevrátil platnú odpoveď. Skúste to znova.');
   if (!response.ok) throw new Error(result.error || 'Riverdale požiadavku odmietol.');
-  return {...result, cloudUrl: riverdaleConfig.cloudUrl};
+  return {...result, cloudUrl};
 }
 
 async function runCollection(message, originTabId) {

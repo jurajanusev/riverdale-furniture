@@ -118,7 +118,7 @@ def create_app(test_config=None):
         if not supplied_token:
             return False
         try:
-            return collector_signer.loads(supplied_token, max_age=7200).get("purpose") == "collector"
+            return collector_signer.loads(supplied_token, max_age=30 * 24 * 60 * 60).get("purpose") == "collector"
         except (BadSignature, SignatureExpired, AttributeError):
             return False
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -324,12 +324,20 @@ def create_app(test_config=None):
         store = str(raw.get("store", "")).strip()
         product_url = str(raw.get("product_url", "")).strip()
         scraper_class = next((cls for cls in SCRAPERS if cls.store == store), None)
+        parsed_url = urlparse(product_url)
+        source_host = (parsed_url.hostname or "").lower().removeprefix("www.")
         try:
-            valid_url = bool(scraper_class and scraper_class(criteria=context).is_product_url(product_url))
+            valid_url = bool(
+                (scraper_class and scraper_class(criteria=context).is_product_url(product_url))
+                or (
+                    not scraper_class and parsed_url.scheme in {"http", "https"}
+                    and source_host and store.lower() == source_host
+                )
+            )
         except (TypeError, ValueError):
             valid_url = False
         if not str(raw.get("name", "")).strip() or not valid_url:
-            return jsonify(error="Stránka nevyzerá ako platný produkt podporovaného obchodu."), 400
+            return jsonify(error="Stránka nevyzerá ako platný produkt alebo ponuka."), 400
         allowed_fields = set(Product.__dataclass_fields__) - {
             "id", "internal_id", "created_at", "updated_at", "local_image",
         }
