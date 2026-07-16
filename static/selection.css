@@ -11,7 +11,9 @@
 .import-panel h2 { margin: 0; font: 1.75rem Georgia, serif; }
 .import-panel p:last-child { max-width: 48rem; margin: .45rem 0 0; color: #6d786f; line-height: 1.5; }
 .import-actions { display: flex; gap: .6rem; flex: 0 0 auto; }
-@media (max-width: 700px) { .import-panel { display: block; } .import-actions { margin-top: 1rem; flex-wrap: wrap; } }
+.filters { grid-template-columns: repeat(5, minmax(140px, 1fr)); }
+@media (max-width: 1100px) { .filters { grid-template-columns: repeat(2, minmax(140px, 1fr)); } }
+@media (max-width: 700px) { .import-panel { display: block; } .import-actions { margin-top: 1rem; flex-wrap: wrap; } .filters { grid-template-columns: 1fr; } }
 .selection-main { padding-bottom: 5rem; }
 .selection-summary { display: flex; align-items: center; justify-content: space-between; gap: 2rem; border-top: 5px solid #c99c4f; }
 .selection-summary h2 { margin: .2rem 0 .6rem; }

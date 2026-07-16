@@ -79,6 +79,29 @@ class RiverdaleAppTest(unittest.TestCase):
         canva = self.client.get("/export/canva")
         self.assertIn("product_id", canva.data.decode("utf-8-sig"))
 
+    def test_room_page_shows_products_from_every_category_and_type(self):
+        self.add_product()
+        self.client.post("/products", data={
+            "space_id": "dom-betty", "room": "spálňa / izba",
+            "main_category": "nabytok", "item_type": "skriňa",
+            "name": "Skriňa Betty", "store": "IKEA Slovensko", "price": "299",
+            "product_url": "https://www.ikea.com/sk/sk/p/skrina-betty-12345678/",
+        })
+        response = self.client.get("/", query_string={
+            "space_id": "dom-betty", "room": "spálňa / izba",
+            "main_category": "nabytok", "item_type": "posteľ",
+        })
+        text = response.get_data(as_text=True)
+        self.assertIn("Overená vidiecka posteľ", text)
+        self.assertIn("Skriňa Betty", text)
+        self.assertIn("Všetky produkty v miestnosti", text)
+
+        filtered = self.client.get("/", query_string={
+            "space_id": "dom-betty", "room": "spálňa / izba", "item_type": "skriňa", "filters": "1",
+        }).get_data(as_text=True)
+        self.assertIn("Skriňa Betty", filtered)
+        self.assertNotIn("Overená vidiecka posteľ", filtered)
+
     def test_approved_products_from_multiple_categories_share_room_selection(self):
         self.add_product()
         self.client.post("/products", data={

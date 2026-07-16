@@ -358,6 +358,7 @@ def create_app(test_config=None):
             ok=True, product_id=product_id,
             destination=f"{saved.space_name} · {saved.room}",
             approved=saved.approval_status == "approved",
+            management_url=url_for("index", space_id=saved.space_id, room=saved.room),
             selection_url=url_for(
                 "selection", space_id=saved.space_id, room=saved.room,
                 main_category=saved.main_category, item_type=saved.item_type,
@@ -382,14 +383,18 @@ def create_app(test_config=None):
     def index():
         context = validate_context(request.args)
         filters = {key: request.args.get(key, "").strip() for key in ("store", "country", "max_price", "color", "material", "availability", "approval_status")}
-        filters.update({key: context[key] for key in ("space_id", "room", "main_category", "item_type")})
+        filters.update({
+            key: request.args.get(key, "").strip() if request.args.get("filters") == "1" else ""
+            for key in ("main_category", "item_type")
+        })
+        filters.update({key: context[key] for key in ("space_id", "room")})
         sort = request.args.get("sort", "store")
         products = list_products(filters, sort)
         selection_count = len(list_products({
             "space_id": context["space_id"], "room": context["room"],
             "approval_status": "approved",
         }))
-        options = {key: distinct_values(key) for key in ("store", "country", "color", "material", "availability")}
+        options = {key: distinct_values(key) for key in ("item_type", "store", "country", "color", "material", "availability")}
         return render_template(
             "index.html", products=products, filters=filters, context=context, sort=sort,
             options=options, stores=ALLOWED_STORES, status_labels=STATUS_LABELS,

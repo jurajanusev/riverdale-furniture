@@ -257,7 +257,7 @@ async function openRiverdaleProductDialog() {
     }
     await chrome.storage.local.set({lastAssignment: assignment});
     form.innerHTML = `<p class="rd-eyebrow">Riverdale Collector</p><h2>Produkt bol pridaný</h2><p>${result.destination}</p><button class="rd-submit" type="button">Otvoriť v Riverdale</button>`;
-    form.querySelector('.rd-submit').addEventListener('click', () => window.open(new URL(result.selection_url, result.cloudUrl).href, '_blank'));
+    form.querySelector('.rd-submit').addEventListener('click', () => window.open(new URL(result.management_url || result.selection_url, result.cloudUrl).href, '_blank'));
   });
 }
 

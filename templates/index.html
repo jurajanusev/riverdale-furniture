@@ -14,12 +14,12 @@
         <p class="eyebrow">Výber produktov</p>
         <h1>Riverdale</h1>
         <div class="breadcrumbs">
-          <span>{{ context.space_name }}</span><b>›</b><span>{{ context.room }}</span><b>›</b><strong>{{ context.item_type|capitalize }}</strong>
+          <span>{{ context.space_name }}</span><b>›</b><span>{{ context.room }}</span><b>›</b><strong>Všetky produkty</strong>
         </div>
       </div>
       <div class="hero-actions">
         <button class="button ghost" type="button" data-open-spaces>Priestory</button>
-        <a class="button ghost selection-button" href="{{ url_for('selection', space_id=context.space_id, room=context.room, main_category=context.main_category, item_type=context.item_type) }}">Výber miestnosti <span data-selection-count>{{ selection_count }}</span></a>
+        <a class="button ghost selection-button" href="{{ url_for('selection', space_id=context.space_id, room=context.room) }}">Výber miestnosti <span data-selection-count>{{ selection_count }}</span></a>
         <form action="{{ url_for('refresh_prices') }}" method="post"><button class="button ghost" type="submit">Aktualizovať ceny</button></form>
         <details class="export-menu"><summary class="button ghost">Exportovať</summary><div><a href="{{ url_for('export', kind='xlsx') }}">Excel .xlsx</a><a href="{{ url_for('export', kind='csv') }}">Google Sheets CSV</a><a href="{{ url_for('export', kind='canva') }}">Canva Bulk CSV</a></div></details>
       </div>
@@ -36,7 +36,9 @@
 
     <section class="toolbar panel">
       <form class="filters" method="get">
-        <input type="hidden" name="space_id" value="{{ context.space_id }}"><input type="hidden" name="room" value="{{ context.room }}"><input type="hidden" name="main_category" value="{{ context.main_category }}"><input type="hidden" name="item_type" value="{{ context.item_type }}">
+        <input type="hidden" name="space_id" value="{{ context.space_id }}"><input type="hidden" name="room" value="{{ context.room }}"><input type="hidden" name="filters" value="1">
+        <label>Kategória<select name="main_category"><option value="">Všetky</option>{% for category in categories %}<option value="{{ category.id }}" {% if filters.main_category == category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
+        <label>Typ položky<select name="item_type"><option value="">Všetky</option>{% for v in options.item_type %}<option {% if filters.item_type == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
         <label>Obchod<select name="store"><option value="">Všetky</option>{% for v in options.store %}<option {% if filters.store == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
         <label>Krajina<select name="country"><option value="">Všetky</option>{% for v in options.country %}<option {% if filters.country == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
         <label>Max. cena<input name="max_price" type="number" min="0" step="1" value="{{ filters.max_price }}" placeholder="Bez limitu"></label>
@@ -45,11 +47,11 @@
         <label>Dostupnosť<select name="availability"><option value="">Všetky</option>{% for v in options.availability %}<option {% if filters.availability == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
         <label>Stav<select name="approval_status"><option value="">Všetky</option>{% for k,v in status_labels.items() %}<option value="{{ k }}" {% if filters.approval_status == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
         <label>Zoradenie<select name="sort"><option value="store" {% if sort=='store' %}selected{% endif %}>Obchod</option><option value="price_asc" {% if sort=='price_asc' %}selected{% endif %}>Cena: najnižšia</option><option value="price_desc" {% if sort=='price_desc' %}selected{% endif %}>Cena: najvyššia</option><option value="name" {% if sort=='name' %}selected{% endif %}>Názov</option><option value="checked" {% if sort=='checked' %}selected{% endif %}>Dátum kontroly</option></select></label>
-        <button class="button dark" type="submit">Filtrovať</button><a class="reset" href="{{ url_for('index', space_id=context.space_id, room=context.room, main_category=context.main_category, item_type=context.item_type) }}">Zrušiť filtre</a>
+        <button class="button dark" type="submit">Filtrovať</button><a class="reset" href="{{ url_for('index', space_id=context.space_id, room=context.room) }}">Zrušiť filtre</a>
       </form>
     </section>
 
-    <div class="section-heading"><div><p class="eyebrow">{{ category_by_id[context.main_category].name }} · {{ context.space_name }}</p><h2>{{ context.item_type|capitalize }} <span>{{ products|length }}</span></h2><p class="section-context">{{ context.room }}</p></div><button class="button outline" data-open-modal>+ Pridať produkt manuálne</button></div>
+    <div class="section-heading"><div><p class="eyebrow">{{ context.space_name }}</p><h2>{{ context.room|capitalize }} <span>{{ products|length }}</span></h2><p class="section-context">Všetky produkty v miestnosti</p></div><button class="button outline" data-open-modal>+ Pridať produkt manuálne</button></div>
 
     {% if products %}<section class="product-grid">
       {% for p in products %}<article class="product-card status-{{ p.approval_status }}" data-id="{{ p.id }}">
@@ -72,11 +74,11 @@
     <form method="dialog" class="modal-shell"><button class="close" aria-label="Zavrieť">×</button></form>
     <div class="spaces-content">
       <p class="eyebrow">Riverdale</p><h2>Priestory a miestnosti</h2>
-      <p class="spaces-intro">Kliknutím sa presunieš priamo do vybranej miestnosti. Kategória a typ položky zostanú zachované.</p>
+      <p class="spaces-intro">Kliknutím sa presunieš priamo do vybranej miestnosti a zobrazia sa všetky jej produkty.</p>
       <div class="spaces-grid">
         {% for space in spaces %}<section class="space-group {% if context.space_id == space.id %}is-current{% endif %}">
           <h3>{{ space.name }}</h3>
-          <div class="room-links">{% for room in space.rooms %}<a class="{% if context.space_id == space.id and context.room == room %}is-current{% endif %}" href="{{ url_for('index', space_id=space.id, room=room, main_category=context.main_category, item_type=context.item_type) }}">{{ room }}</a>{% endfor %}</div>
+          <div class="room-links">{% for room in space.rooms %}<a class="{% if context.space_id == space.id and context.room == room %}is-current{% endif %}" href="{{ url_for('index', space_id=space.id, room=room) }}">{{ room }}</a>{% endfor %}</div>
         </section>{% endfor %}
       </div>
     </div>
