@@ -31,6 +31,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.environ.get("RIVERDALE_DATA_DIR", BASE_DIR / "data"))
 UPLOAD_DIR = Path(os.environ.get("RIVERDALE_UPLOAD_DIR", BASE_DIR / "static" / "uploads"))
 EXPORT_DIR = Path(os.environ.get("RIVERDALE_EXPORT_DIR", BASE_DIR / "exports"))
+SEARCH_JOB_DIR = DATA_DIR / "search_jobs"
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_STORES = [
     "IKEA Slovensko", "IKEA Rakúsko", "Möbelix Slovensko", "Möbelix Rakúsko",
@@ -90,6 +91,15 @@ def search_criteria(values):
     }
 
 
+def read_search_job(job_id):
+    if not re.fullmatch(r"[A-Za-z0-9_-]{12,64}", job_id or ""):
+        return None
+    try:
+        return json.loads((SEARCH_JOB_DIR / f"{job_id}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
 def create_app(test_config=None):
     app = Flask(__name__)
     app.config.update(SECRET_KEY=os.environ.get("RIVERDALE_SECRET", secrets.token_hex(16)), MAX_CONTENT_LENGTH=8 * 1024 * 1024)
@@ -98,6 +108,7 @@ def create_app(test_config=None):
     collector_signer = URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="riverdale-collector")
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+    SEARCH_JOB_DIR.mkdir(parents=True, exist_ok=True)
     init_db()
 
     def is_cloud_runtime():
@@ -162,6 +173,13 @@ def create_app(test_config=None):
     @app.get("/healthz")
     def healthcheck():
         return jsonify(ok=True)
+
+    @app.get("/api/search-jobs/<job_id>")
+    def search_job_status(job_id):
+        status = read_search_job(job_id)
+        if not status:
+            return jsonify(error="Vyhľadávanie neexistuje alebo bolo prerušené."), 404
+        return jsonify(status)
 
     @app.get("/media/<path:filename>")
     def uploaded_image(filename):
@@ -233,6 +251,8 @@ def create_app(test_config=None):
             "approval_status": "approved",
         }))
         options = {key: distinct_values(key) for key in ("store", "country", "color", "material", "availability")}
+        search_job_id = request.args.get("search_job", "")
+        search_job = read_search_job(search_job_id) if search_job_id else None
         captcha_statuses = {}
         for key, store in CAPTCHA_STORES.items():
             status_path = browser_profile_dir(store) / "riverdale-status.json"
@@ -249,6 +269,7 @@ def create_app(test_config=None):
             cloud_runtime=is_cloud_runtime(),
             search_values=search_form_values(request.args),
             collector_token=collector_signer.dumps({"purpose": "collector"}) if is_cloud_runtime() else "",
+            search_job_id=search_job_id, search_job=search_job,
         )
 
     @app.get("/selection")
@@ -421,11 +442,24 @@ def create_app(test_config=None):
         except ValueError as exc:
             flash(str(exc), "danger")
             return redirect(url_for("index", **context, **search_form_values(request.form)))
-        products, messages = search_all(criteria)
-        for product in products:
-            save_product(product)
-        flash("; ".join(messages), "info")
-        return redirect(url_for("index", **context, **search_form_values(request.form)))
+        job_id = secrets.token_urlsafe(16)
+        job_path = SEARCH_JOB_DIR / f"{job_id}.json"
+        job_path.write_text(
+            json.dumps({"state": "queued", "messages": [], "imported": 0}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        try:
+            subprocess.Popen(
+                [sys.executable, str(BASE_DIR / "search_worker.py"), json.dumps(criteria, ensure_ascii=False), str(job_path)],
+                cwd=BASE_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        except OSError as exc:
+            job_path.write_text(
+                json.dumps({"state": "error", "messages": [], "imported": 0, "error": str(exc)}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        return redirect(url_for("index", **context, **search_form_values(request.form), search_job=job_id))
 
     @app.post("/verify-store/<store_key>")
     def verify_store(store_key):

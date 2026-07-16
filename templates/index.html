@@ -28,6 +28,11 @@
 
   <main>
     {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="notice {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
+    {% if search_job %}<div class="notice {{ 'danger' if search_job.state == 'error' else 'info' }}" data-search-job="{{ search_job_id }}" data-search-state="{{ search_job.state }}">
+      {% if search_job.state in ('queued', 'running') %}Vyhľadávanie prebieha na pozadí. Stránku môžeš ďalej používať; výsledky sa načítajú automaticky.
+      {% elif search_job.state == 'complete' %}{{ search_job.messages|join('; ') }}
+      {% else %}Vyhľadávanie sa nepodarilo dokončiť: {{ search_job.error }}{% endif %}
+    </div>{% endif %}
 
     <section class="search-panel panel">
       <div class="panel-title"><div><p class="eyebrow">Vyhľadávanie produktov</p><h2>Čo hľadáme?</h2></div><p>Set a miestnosť určujú iba cieľové zaradenie schváleného produktu. Neovplyvňujú výsledky vyhľadávania. Prázdna farba alebo materiál znamená bez obmedzenia.</p></div>

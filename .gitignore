@@ -5,6 +5,7 @@ data/*.db
 data/browser_profiles/
 data/browser_cache/
 data/collector-server*.log
+data/search_jobs/
 static/uploads/*
 !static/uploads/.gitkeep
 exports/*

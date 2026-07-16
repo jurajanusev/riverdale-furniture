@@ -307,16 +307,17 @@ class RiverdaleAppTest(unittest.TestCase):
         scraper = JyskSlovakiaScraper(criteria={"item_type": "koberec"})
         self.assertTrue(scraper.is_product_url("https://jysk.sk/domacnost/koberce/male-koberce/koberec-tysbast-60x90-rozne"))
 
-    @patch("app.search_all")
-    def test_search_imports_only_returned_products(self, search_all):
-        search_all.return_value = ([], ["IKEA Slovensko: 0 vhodných produktov"])
+    @patch("app.subprocess.Popen")
+    def test_search_runs_in_background_without_blocking_request(self, popen):
         response = self.client.post("/search", follow_redirects=True)
         self.assertEqual(response.status_code, 200)
+        self.assertIn("Vyhľadávanie prebieha na pozadí".encode(), response.data)
+        popen.assert_called_once()
+        self.assertIn("search_worker.py", popen.call_args.args[0][1])
         self.assertEqual(database.list_products(), [])
 
-    @patch("app.search_all")
-    def test_search_passes_riverdale_context_and_generic_criteria(self, search_all):
-        search_all.return_value = ([], ["FAVI Slovensko: 0 vhodných produktov"])
+    @patch("app.subprocess.Popen")
+    def test_search_passes_riverdale_context_and_generic_criteria(self, popen):
         response = self.client.post("/search", data={
             "space_id": "dom-archie", "room": "jedáleň", "main_category": "nabytok",
             "item_type": "jedálenský stôl", "search_max_price": "450",
@@ -325,7 +326,7 @@ class RiverdaleAppTest(unittest.TestCase):
             "search_max_depth": "100", "search_max_height": "90",
         })
         self.assertEqual(response.status_code, 302)
-        criteria = search_all.call_args.args[0]
+        criteria = json.loads(popen.call_args.args[0][2])
         self.assertEqual(criteria["space_name"], "Dom Archie")
         self.assertEqual(criteria["room"], "jedáleň")
         self.assertEqual(criteria["item_type"], "jedálenský stôl")

@@ -5,6 +5,26 @@ const spacesModal = document.querySelector('#spaces-modal');
 document.querySelectorAll('[data-open-spaces]').forEach(button => button.addEventListener('click', () => spacesModal.showModal()));
 spacesModal?.addEventListener('click', event => { if (event.target === spacesModal) spacesModal.close(); });
 
+const searchJob = document.querySelector('[data-search-job]');
+if (searchJob && ['queued', 'running'].includes(searchJob.dataset.searchState)) {
+  const pollSearch = async () => {
+    try {
+      const response = await fetch(`/api/search-jobs/${searchJob.dataset.searchJob}`);
+      if (!response.ok) return;
+      const status = await response.json();
+      if (status.state === 'complete' || status.state === 'error') window.location.reload();
+    } catch { }
+  };
+  setInterval(pollSearch, 3000);
+  pollSearch();
+}
+
+document.querySelector('.search-form')?.addEventListener('submit', event => {
+  const button = event.currentTarget.querySelector('.search-submit');
+  button.disabled = true;
+  button.textContent = 'Spúšťam vyhľadávanie…';
+});
+
 const fillSelect = (select, values, preferred) => {
   select.replaceChildren(...values.map(value => {
     const option = document.createElement('option');
