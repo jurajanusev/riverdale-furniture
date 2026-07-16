@@ -72,6 +72,51 @@ document.querySelectorAll('[data-local-verify-all]').forEach(link => {
   });
 });
 
+const moveModal = document.querySelector('#move-product-modal');
+const moveForm = moveModal?.querySelector('[data-move-product-form]');
+const moveSpace = moveModal?.querySelector('[data-move-space]');
+const moveRoom = moveModal?.querySelector('[data-move-room]');
+let movingCard = null;
+
+const updateMoveRooms = () => {
+  if (!moveSpace || !moveRoom) return;
+  const rooms = JSON.parse(moveSpace.options[moveSpace.selectedIndex].dataset.rooms || '[]');
+  fillSelect(moveRoom, rooms, moveRoom.value);
+};
+moveSpace?.addEventListener('change', updateMoveRooms);
+updateMoveRooms();
+
+document.querySelectorAll('[data-move-product]').forEach(button => {
+  button.addEventListener('click', () => {
+    movingCard = button.closest('.product-card');
+    moveModal.querySelector('[data-move-product-name]').textContent = movingCard.querySelector('h3').textContent.trim();
+    moveModal.querySelector('[data-move-error]').textContent = '';
+    moveModal.showModal();
+  });
+});
+
+moveForm?.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!movingCard) return;
+  const response = await fetch(`/api/products/${movingCard.dataset.id}`, {
+    method: 'PATCH', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({space_id: moveSpace.value, room: moveRoom.value})
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    moveModal.querySelector('[data-move-error]').textContent = result.error || 'Produkt sa nepodarilo presunúť.';
+    return;
+  }
+  const wasApproved = movingCard.classList.contains('status-approved');
+  movingCard.remove();
+  const counter = document.querySelector('.section-heading h2 span');
+  if (counter) counter.textContent = Math.max(0, Number(counter.textContent) - 1);
+  const selectionCount = document.querySelector('[data-selection-count]');
+  if (selectionCount && wasApproved) selectionCount.textContent = Math.max(0, Number(selectionCount.textContent) - 1);
+  moveModal.close();
+  movingCard = null;
+});
+
 document.querySelectorAll('.product-card').forEach(card => {
   const save = async status => {
     const previousStatus = [...card.classList].find(c => c.startsWith('status-'))?.replace('status-', '');

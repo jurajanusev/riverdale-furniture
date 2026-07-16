@@ -167,6 +167,24 @@ class RiverdaleAppTest(unittest.TestCase):
         missing = self.client.delete(f"/api/products/{product.id}")
         self.assertEqual(missing.status_code, 404)
 
+    def test_move_product_to_another_space_keeps_approval(self):
+        self.add_product()
+        product = database.list_products()[0]
+        self.client.patch(f"/api/products/{product.id}", json={"approval_status": "approved"})
+        response = self.client.patch(
+            f"/api/products/{product.id}",
+            json={"space_id": "izba-cheryl", "room": "hlavná izba"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["moved"])
+        moved = database.get_product(product.id)
+        self.assertEqual((moved.space_id, moved.space_name, moved.room), ("izba-cheryl", "Izba Cheryl", "hlavná izba"))
+        self.assertEqual(moved.approval_status, "approved")
+        self.assertEqual(
+            self.client.patch(f"/api/products/{product.id}", json={"space_id": "izba-cheryl", "room": "neexistuje"}).status_code,
+            400,
+        )
+
     def test_validation_rejects_store_and_price(self):
         response = self.client.post("/products", data={"name": "X", "store": "Iný obchod", "price": "10", "product_url": "https://example.com/x"}, follow_redirects=True)
         self.assertIn("nie je povolený", response.get_data(as_text=True))

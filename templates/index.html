@@ -110,6 +110,7 @@
           <label class="notes-label">Poznámka<textarea class="notes" rows="2" placeholder="Poznámka pre tím…">{{ p.notes }}</textarea></label>
           <div class="approval"><button data-status="approved">Schváliť do výberu</button><button data-status="maybe">Možno</button><button data-status="rejected">Vyradiť</button></div>
           <p class="selection-feedback {% if p.approval_status == 'approved' %}is-visible{% endif %}">Produkt je vo výbere miestnosti. <a href="{{ url_for('selection', space_id=p.space_id, room=p.room, main_category=p.main_category, item_type=p.item_type) }}">Otvoriť výber</a></p>
+          <button class="move-product" type="button" data-move-product>Presunúť do iného priestoru</button>
           <button class="delete-product" type="button" data-delete-product>Vymazať produkt</button>
         </div>
       </article>{% endfor %}
@@ -128,6 +129,21 @@
         </section>{% endfor %}
       </div>
     </div>
+  </dialog>
+
+  <dialog id="move-product-modal" class="move-product-modal">
+    <form method="dialog" class="modal-shell"><button class="close" aria-label="Zavrieť">×</button></form>
+    <form class="modal-content" data-move-product-form>
+      <p class="eyebrow">Zmeniť zaradenie</p>
+      <h2>Presunúť produkt</h2>
+      <p data-move-product-name></p>
+      <div class="form-grid">
+        <label>Priestor<select data-move-space>{% for space in spaces %}<option value="{{ space.id }}" data-rooms='{{ space.rooms|tojson }}'>{{ space.name }}</option>{% endfor %}</select></label>
+        <label>Miestnosť / zóna<select data-move-room></select></label>
+      </div>
+      <p class="move-error" data-move-error></p>
+      <button class="button primary" type="submit">Presunúť produkt</button>
+    </form>
   </dialog>
 
   <dialog id="product-modal"><form method="dialog" class="modal-shell"><button class="close" aria-label="Zavrieť">×</button></form><form action="{{ url_for('add_product') }}" method="post" enctype="multipart/form-data" class="modal-content context-form"><p class="eyebrow">Overený zdroj</p><h2>Pridať produkt manuálne</h2><div class="form-grid">

@@ -3,6 +3,10 @@
 .selection-feedback { display: none; margin: .75rem 0 0; padding: .7rem .8rem; background: #edf2ec; border-left: 3px solid #304b3d; color: #304b3d; font-size: .88rem; }
 .selection-feedback.is-visible { display: block; }
 .selection-feedback a { color: inherit; font-weight: 700; }
+.move-product { width: 100%; margin-top: 10px; padding: 10px; border: 1px solid #304b3d; background: #f4f6f2; color: #304b3d; cursor: pointer; }
+.move-product:hover { background: #e7eee7; }
+.move-product-modal { width: min(680px, 94vw); }
+.move-error { min-height: 1.2em; color: #9c4a42; }
 .captcha-panel { margin: 0 0 18px; }
 .captcha-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.2rem; cursor: pointer; color: #304b3d; }
 .captcha-panel summary span { color: #747c74; font-size: .8rem; font-weight: 400; }

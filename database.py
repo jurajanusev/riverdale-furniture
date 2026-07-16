@@ -205,6 +205,25 @@ def update_product(product_id, **changes):
     return cur.rowcount > 0
 
 
+def move_product(product_id, space_id, space_name, room):
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with connection() as conn:
+        product = conn.execute("SELECT product_url, item_type FROM products WHERE id = ?", (product_id,)).fetchone()
+        if not product:
+            return "missing"
+        duplicate = conn.execute(
+            "SELECT id FROM products WHERE product_url = ? AND space_id = ? AND room = ? AND item_type = ? AND id <> ?",
+            (product["product_url"], space_id, room, product["item_type"], product_id),
+        ).fetchone()
+        if duplicate:
+            return "duplicate"
+        conn.execute(
+            "UPDATE products SET space_id = ?, space_name = ?, room = ?, updated_at = ? WHERE id = ?",
+            (space_id, space_name, room, now, product_id),
+        )
+    return "moved"
+
+
 def delete_product(product_id):
     with connection() as conn:
         cur = conn.execute("DELETE FROM products WHERE id = ?", (product_id,))

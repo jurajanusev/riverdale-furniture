@@ -19,7 +19,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from database import (
     architect_choice_counts, architect_choice_ids, create_share_link, delete_product,
     distinct_values, get_product, get_share_link, init_db, list_products,
-    list_share_links, revoke_share_link, save_product, set_architect_choice, update_product,
+    list_share_links, move_product, revoke_share_link, save_product, set_architect_choice, update_product,
 )
 from riverdale_catalog import CATEGORIES, CATEGORY_BY_ID, DEFAULT_CONTEXT, SPACES, SPACE_BY_ID, validate_context
 from scrapers import SCRAPERS, search_all
@@ -380,13 +380,31 @@ def create_app(test_config=None):
         status = data.get("approval_status")
         if status is not None and status not in STATUS_LABELS:
             return jsonify(error="Neplatný stav."), 400
+        destination_space_id = data.get("space_id")
+        destination_room = str(data.get("room", "")).strip()
+        moved = False
+        if destination_space_id is not None or destination_room:
+            destination = SPACE_BY_ID.get(str(destination_space_id or ""))
+            if not destination or destination_room not in destination["rooms"]:
+                return jsonify(error="Neplatný cieľový priestor alebo miestnosť."), 400
+            move_result = move_product(
+                product_id, destination["id"], destination["name"], destination_room,
+            )
+            if move_result == "duplicate":
+                return jsonify(error="Tento produkt už v cieľovej miestnosti existuje."), 409
+            if move_result == "missing":
+                return jsonify(error="Produkt neexistuje."), 404
+            moved = True
         update_product(product_id, approval_status=status, notes=data.get("notes"))
+        product = get_product(product_id)
         return jsonify(
-            ok=True, approval_status=status, label=STATUS_LABELS.get(status, ""),
+            ok=True, moved=moved, approval_status=product.approval_status,
+            label=STATUS_LABELS.get(product.approval_status, ""),
             selection_url=url_for(
                 "selection", space_id=product.space_id, room=product.room,
                 main_category=product.main_category, item_type=product.item_type,
             ),
+            destination=f"{product.space_name} · {product.room}",
         )
 
     @app.delete("/api/products/<int:product_id>")
