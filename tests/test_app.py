@@ -458,6 +458,7 @@ class RiverdaleAppTest(unittest.TestCase):
             manifest = json.loads(bundle.read("manifest.json"))
         self.assertEqual(manifest["manifest_version"], 3)
         self.assertIn("https://www.moebelix.sk/*", manifest["host_permissions"])
+        self.assertIn("https://moebelix.sk/*", manifest["host_permissions"])
         self.assertIn("https://www.ikea.com/sk/sk/*", manifest["host_permissions"])
         self.assertIn("https://www.asko-nabytok.sk/*", manifest["host_permissions"])
 
