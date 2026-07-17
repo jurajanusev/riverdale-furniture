@@ -192,7 +192,7 @@ def normalize(value):
 
 
 def update_product(product_id, **changes):
-    allowed = {"approval_status", "notes"}
+    allowed = {"approval_status", "notes", "local_image"}
     changes = {k: v for k, v in changes.items() if k in allowed and v is not None}
     if not changes:
         return False

@@ -7,6 +7,9 @@
 .move-product:hover { background: #e7eee7; }
 .move-product-modal { width: min(680px, 94vw); }
 .move-error { min-height: 1.2em; color: #9c4a42; }
+.product-image-form { margin: .65rem 0 1rem; }
+.product-image-form label { display: block; padding: .7rem .8rem; border: 1px dashed #87988d; color: #304b3d; text-align: center; font-size: .78rem; font-weight: 700; cursor: pointer; }
+.product-image-form input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .import-panel { display: flex; align-items: center; justify-content: space-between; gap: 2rem; margin: 0 0 18px; padding: 1.4rem; border-top: 4px solid #c99c4f; }
 .import-panel h2 { margin: 0; font: 1.75rem Georgia, serif; }
 .import-panel p:last-child { max-width: 48rem; margin: .45rem 0 0; color: #6d786f; line-height: 1.5; }

@@ -60,6 +60,9 @@
           <dl><div><dt>Celkové rozmery</dt><dd>{{ p.total_dimensions }}</dd></div><div><dt>Materiál</dt><dd>{{ p.material }}</dd></div><div><dt>Farba</dt><dd>{{ p.color }}</dd></div>{% if p.item_type == 'posteľ' %}<div><dt>Rozmer matraca</dt><dd>{{ p.mattress_width or '?' }} × {{ p.mattress_length or '?' }} cm</dd></div><div><dt>Rošt v cene</dt><dd>{{ 'Áno' if p.slats_included is true else 'Nie' if p.slats_included is false else 'Neoverené' }}</dd></div><div><dt>Matrac v cene</dt><dd>{{ 'Áno' if p.mattress_included is true else 'Nie' if p.mattress_included is false else 'Neoverené' }}</dd></div>{% endif %}</dl>
           <div class="verification"><span>{{ p.availability }}</span><span>Kontrola: {{ p.last_checked }}</span></div>
           <a class="product-link" href="{{ p.product_url }}" target="_blank" rel="noopener noreferrer">Otvoriť produkt ↗</a>
+          <form class="product-image-form" action="{{ url_for('upload_product_image', product_id=p.id) }}" method="post" enctype="multipart/form-data">
+            <label>{{ 'Zmeniť fotografiu' if p.local_image or p.image_url else 'Pridať fotografiu' }}<input name="image_file" type="file" accept="image/jpeg,image/png,image/webp" required onchange="this.form.submit()"></label>
+          </form>
           <label class="notes-label">Poznámka<textarea class="notes" rows="2" placeholder="Poznámka pre tím…">{{ p.notes }}</textarea></label>
           <div class="approval"><button data-status="approved">Schváliť do výberu</button><button data-status="maybe">Možno</button><button data-status="rejected">Vyradiť</button></div>
           <p class="selection-feedback {% if p.approval_status == 'approved' %}is-visible{% endif %}">Produkt je vo výbere miestnosti. <a href="{{ url_for('selection', space_id=p.space_id, room=p.room, main_category=p.main_category, item_type=p.item_type) }}">Otvoriť výber</a></p>

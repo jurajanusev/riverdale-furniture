@@ -228,6 +228,24 @@ class RiverdaleAppTest(unittest.TestCase):
         products = database.list_products({"country": "Iný zdroj"})
         self.assertEqual({product.store for product in products}, {"Bazár", "Iné"})
 
+    def test_imported_product_can_receive_uploaded_photo(self):
+        self.add_product()
+        product = database.list_products()[0]
+        upload_dir = Path(self.tmp.name) / "uploads"
+        upload_dir.mkdir()
+        with patch("app.UPLOAD_DIR", upload_dir):
+            response = self.client.post(
+                f"/products/{product.id}/image",
+                data={"image_file": (io.BytesIO(b"fake-jpeg"), "product.jpg")},
+                content_type="multipart/form-data",
+                follow_redirects=True,
+            )
+            saved = database.get_product(product.id)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("Fotografia produktu bola uložená", response.get_data(as_text=True))
+            self.assertTrue(saved.local_image.startswith("uploads/"))
+            self.assertTrue((upload_dir / Path(saved.local_image).name).is_file())
+
     def test_scraper_parses_json_ld_without_inventing(self):
         html = '''<html><script type="application/ld+json">{"@type":"Product","name":"COUNTRY posteľ biela 90x200","image":["https://example.com/a.jpg"],"description":"Masívne drevo, tradičné čelo. Bez roštu a matraca.","offers":{"price":"249.00","priceCurrency":"EUR","availability":"https://schema.org/InStock"}}</script></html>'''
         scraper = BaseScraper()

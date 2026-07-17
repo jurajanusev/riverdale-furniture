@@ -524,6 +524,26 @@ def create_app(test_config=None):
             flash(str(exc), "danger")
         return redirect(url_for("index", **{key: context[key] for key in ("space_id", "room", "main_category", "item_type")}))
 
+    @app.post("/products/<int:product_id>/image")
+    def upload_product_image(product_id):
+        product = get_product(product_id)
+        if not product:
+            flash("Produkt neexistuje.", "danger")
+            return redirect(url_for("index"))
+        image = request.files.get("image_file")
+        if not image or not image.filename:
+            flash("Vyberte fotografiu produktu.", "danger")
+        else:
+            suffix = Path(image.filename).suffix.lower()
+            if suffix not in ALLOWED_IMAGE_EXTENSIONS:
+                flash("Fotografia musí byť JPG, PNG alebo WebP.", "danger")
+            else:
+                filename = f"{secrets.token_hex(12)}{suffix}"
+                image.save(UPLOAD_DIR / filename)
+                update_product(product_id, local_image=f"uploads/{filename}")
+                flash("Fotografia produktu bola uložená.", "success")
+        return redirect(url_for("index", space_id=product.space_id, room=product.room))
+
     @app.patch("/api/products/<int:product_id>")
     def change_product(product_id):
         product = get_product(product_id)
