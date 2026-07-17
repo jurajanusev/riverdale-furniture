@@ -56,6 +56,8 @@ class RiverdaleAppTest(unittest.TestCase):
         self.assertIn("Zatiaľ tu nie sú žiadne produkty".encode(), response.data)
         self.assertIn("Priestory a miestnosti".encode(), response.data)
         self.assertIn("Dom Archie".encode(), response.data)
+        self.assertIn("izba Archie".encode(), response.data)
+        self.assertNotIn("Dom Walterovcov".encode(), response.data)
         self.assertIn("Nájdite produkt a kliknite na R".encode(), response.data)
         self.assertNotIn("Vyhľadať produkty".encode(), response.data)
         self.assertNotIn("CAPTCHA".encode(), response.data)

@@ -3,8 +3,7 @@
 PROJECT_NAME = "Riverdale"
 
 SPACES = [
-    {"id": "dom-walterovcov", "name": "Dom Walterovcov", "rooms": ["obývačka", "jedáleň", "kuchyňa", "vstupná zóna", "schodisko"]},
-    {"id": "dom-archie", "name": "Dom Archie", "rooms": ["obývačka", "kuchyňa", "jedáleň", "vstupná zóna", "schodisko"]},
+    {"id": "dom-archie", "name": "Dom Archie", "rooms": ["izba Archie", "obývačka", "kuchyňa", "jedáleň", "vstupná zóna", "schodisko"]},
     {"id": "dom-betty", "name": "Dom Betty", "rooms": ["spálňa / izba", "obývačka", "kuchyňa", "jedáleň", "vstupná zóna", "schodisko"]},
     {"id": "vila-cheryl", "name": "Vila Cheryl", "rooms": ["salón", "jedáleň", "vstupná hala", "schodisko", "odpočinková zóna"]},
     {"id": "garzonka", "name": "Garzónka", "rooms": ["obývacia a spacia zóna", "kuchynská zóna", "vstup"]},
