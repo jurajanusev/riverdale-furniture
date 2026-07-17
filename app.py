@@ -41,7 +41,7 @@ ALLOWED_STORES = [
     "IKEA Slovensko", "IKEA Rakúsko", "Möbelix Slovensko", "Möbelix Rakúsko",
     "XXXLutz Slovensko", "XXXLutz Rakúsko", "Mömax Rakúsko", "Sconto Slovensko",
     "JYSK Slovensko", "JYSK Rakúsko", "Bonami Slovensko", "ASKO Slovensko",
-    "FAVI Slovensko",
+    "FAVI Slovensko", "Bazár", "Iné",
 ]
 STATUS_LABELS = {"unreviewed": "Neposúdené", "approved": "Schválené", "rejected": "Vyradené", "maybe": "Možno"}
 CAPTCHA_STORES = {
@@ -787,7 +787,8 @@ def manual_product_from_request(req):
     from scrapers.base import BaseScraper
     return {
         **context,
-        "name": form["name"].strip(), "store": form["store"], "country": "Slovensko" if "Slovensko" in form["store"] else "Rakúsko",
+        "name": form["name"].strip(), "store": form["store"],
+        "country": "Iný zdroj" if form["store"] in {"Bazár", "Iné"} else "Slovensko" if "Slovensko" in form["store"] else "Rakúsko",
         "frame_price": price, "sale_price": price, "currency": "EUR", "mattress_width": width, "mattress_length": length,
         "total_dimensions": dimensions, "color": form.get("color", "Neoverené").strip() or "Neoverené",
         "material": form.get("material", "Neoverené").strip() or "Neoverené", "slats_included": optional_bool(form.get("slats_included")),
